@@ -16,6 +16,35 @@ MuncheKit releases are created from an annotated `vX.Y.Z` tag after the same ver
   git push -u origin main
   ```
 
+  With an authenticated GitHub CLI and the local `origin` already configured, the equivalent publication and repository settings are:
+
+  ```bash
+  gh auth status
+  gh repo create ongsi2/munchekit --public \
+    --description "An explainable Korean prose linter and safe rewriting toolkit for product copy, docs, and localization files." \
+    --disable-wiki
+  git push -u origin main
+  gh repo edit ongsi2/munchekit \
+    --default-branch main \
+    --delete-branch-on-merge \
+    --enable-issues \
+    --enable-wiki=false \
+    --enable-squash-merge \
+    --enable-merge-commit=false \
+    --enable-rebase-merge \
+    --add-topic korean \
+    --add-topic korean-nlp \
+    --add-topic korean-writing \
+    --add-topic prose-linter \
+    --add-topic copyediting \
+    --add-topic localization \
+    --add-topic i18n \
+    --add-topic typescript
+  gh api --method PUT repos/ongsi2/munchekit/private-vulnerability-reporting
+  ```
+
+  If the repository was created separately, skip only `gh repo create`; keep the push and settings commands. The final API call enables [private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately).
+
 - [ ] Confirm that the README badges, rule documentation links, schema URLs, issue tracker, and `SECURITY.md` links all resolve from the public repository.
 - [ ] Set the repository description to `An explainable Korean prose linter and safe rewriting toolkit for product copy, docs, and localization files.`
 - [ ] Add GitHub topics: `korean`, `korean-nlp`, `korean-writing`, `prose-linter`, `copyediting`, `localization`, `i18n`, and `typescript`.

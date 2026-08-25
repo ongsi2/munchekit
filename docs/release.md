@@ -21,7 +21,7 @@ MuncheKit releases are created from an annotated `vX.Y.Z` tag after the same ver
   ```bash
   gh auth status
   gh repo create ongsi2/munchekit --public \
-    --description "An explainable Korean prose linter and safe rewriting toolkit for product copy, docs, and localization files." \
+    --description "Explainable Korean prose linter and safe rewriting toolkit — 어색한 한국어 문체를 진단하고 안전하게 다듬는 CLI/TypeScript library." \
     --disable-wiki
   git push -u origin main
   gh repo edit ongsi2/munchekit \
@@ -39,15 +39,22 @@ MuncheKit releases are created from an annotated `vX.Y.Z` tag after the same ver
     --add-topic copyediting \
     --add-topic localization \
     --add-topic i18n \
-    --add-topic typescript
+    --add-topic typescript \
+    --add-topic korean-language \
+    --add-topic natural-language-processing \
+    --add-topic writing-tools \
+    --add-topic linter \
+    --add-topic cli
   gh api --method PUT repos/ongsi2/munchekit/private-vulnerability-reporting
+  gh api --method PUT repos/ongsi2/munchekit/vulnerability-alerts
+  gh api --method PUT repos/ongsi2/munchekit/automated-security-fixes
   ```
 
-  If the repository was created separately, skip only `gh repo create`; keep the push and settings commands. The final API call enables [private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately).
+  If the repository was created separately, skip only `gh repo create`; keep the push and settings commands. The API calls enable [private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately), Dependabot alerts, and automated security fixes.
 
 - [ ] Confirm that the README badges, rule documentation links, schema URLs, issue tracker, and `SECURITY.md` links all resolve from the public repository.
-- [ ] Set the repository description to `An explainable Korean prose linter and safe rewriting toolkit for product copy, docs, and localization files.`
-- [ ] Add GitHub topics: `korean`, `korean-nlp`, `korean-writing`, `prose-linter`, `copyediting`, `localization`, `i18n`, and `typescript`.
+- [ ] Set the repository description to `Explainable Korean prose linter and safe rewriting toolkit — 어색한 한국어 문체를 진단하고 안전하게 다듬는 CLI/TypeScript library.`
+- [ ] Add GitHub topics: `korean`, `korean-nlp`, `korean-writing`, `prose-linter`, `copyediting`, `localization`, `i18n`, `typescript`, `korean-language`, `natural-language-processing`, `writing-tools`, `linter`, and `cli`.
 - [ ] Upload `assets/social-preview.png` in the repository Social preview settings; committing the image alone does not set the GitHub card.
 - [ ] Enable private vulnerability reporting under the repository security settings.
 

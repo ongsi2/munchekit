@@ -4,6 +4,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Runtime and parser majors can change the supported Node.js range or AST
+    # contract. Review those upgrades explicitly instead of opening noisy PRs.
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
     groups:
       development-dependencies:
         dependency-type: development

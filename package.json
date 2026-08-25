@@ -43,7 +43,7 @@
     "test:coverage": "vitest run --coverage",
     "test:package": "node scripts/package-smoke.mjs",
     "verify": "npm run check && npm run test:coverage && npm run build",
-    "prepack": "npm run build",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run check && npm run test:coverage"
   },
   "repository": {

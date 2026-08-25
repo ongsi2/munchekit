@@ -8,12 +8,17 @@ MuncheKit finds Korean copy inside Markdown, MDX, HTML, JSX, TSX, and JSON, then
 
 Node.js 20.19.0 or newer is required.
 
+The npm package is being prepared for the first tagged release. Until then, run the public GitHub source directly or pin it in a project:
+
 ```bash
-npx munchekit check messages/ko.json --profile web
-npx munchekit lint "content/**/*.md" --output sarif
-npx munchekit fix post.md             # preview safe edits
-npx munchekit fix post.md --write     # apply safe edits
+npx --yes github:ongsi2/munchekit check messages/ko.json --profile web
+npm install --save-dev github:ongsi2/munchekit
+npx munche lint "content/**/*.md" --output sarif
+npx munche fix post.md             # preview safe edits
+npx munche fix post.md --write     # apply safe edits
 ```
+
+After `munchekit` v0.1.0 is published to npm, the GitHub package spec can be shortened to `munchekit`.
 
 ```ts
 import { analyze, applyFixes } from 'munchekit';
@@ -50,7 +55,7 @@ MuncheKit does not determine whether a human or AI wrote a document, and it is n
 
 ```bash
 ANTHROPIC_API_KEY=... \
-  npx munchekit rewrite post.md --model <claude-model-id>
+  npx --yes github:ongsi2/munchekit rewrite post.md --model <claude-model-id>
 ```
 
 No model is hard-coded because model IDs change. The command previews output unless `--write` is explicitly supplied. HTTPS is required, redirects are rejected, and response time and size are bounded. Even a candidate that passes every structural guard remains review-only.

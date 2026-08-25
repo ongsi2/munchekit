@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ongsi2/munchekit/v0.1.0/schema/munche.schema.json",
+  "title": "MuncheKit configuration",
+  "type": "object",
+  "$defs": {
+    "ruleLevel": {
+      "type": "string",
+      "enum": ["off", "info", "warning", "error"]
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "profile": {
+      "type": "string",
+      "enum": ["natural", "web", "tech-blog", "business", "thmm-tech"]
+    },
+    "files": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "type": "string" }
+    },
+    "ignore": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "type": "string" }
+    },
+    "preserveTerms": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "preservePatterns": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+    },
+    "ignoreQuotes": { "type": "boolean" },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "KO-AI-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-BOILER-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-CALQUE-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-CALQUE-002": { "$ref": "#/$defs/ruleLevel" },
+        "KO-CALQUE-003": { "$ref": "#/$defs/ruleLevel" },
+        "KO-CONNECT-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-END-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-LEN-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-META-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-NOM-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-PAIR-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-PARA-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-PLURAL-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-POLITE-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-POSS-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-PRON-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-PUNCT-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-PUNCT-002": { "$ref": "#/$defs/ruleLevel" },
+        "KO-RED-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-RED-002": { "$ref": "#/$defs/ruleLevel" },
+        "KO-REGISTER-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-SPACE-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-VAGUE-001": { "$ref": "#/$defs/ruleLevel" },
+        "KO-VAGUE-002": { "$ref": "#/$defs/ruleLevel" },
+        "KO-VOICE-001": { "$ref": "#/$defs/ruleLevel" }
+      }
+    },
+    "rewrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxChangedCharsRatio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}

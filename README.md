@@ -1,0 +1,230 @@
+# MuncheKit · 문체킷
+
+> 웹·앱·문서의 어색한 한국어를 찾아 이유와 수정안을 보여주고, 원뜻을 지키며 다듬습니다.
+
+[English](./README.en.md) · [규칙 목록](./docs/rules.md) · [설계 원칙](./docs/architecture.md) · [Claude 교차 검토](./docs/reviews/claude-2026-08-25.md) · [기여하기](./CONTRIBUTING.md)
+
+[![CI](https://github.com/ongsi2/munchekit/actions/workflows/ci.yml/badge.svg)](https://github.com/ongsi2/munchekit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2f6f5e.svg)](./LICENSE)
+[![Node.js 20.19+](https://img.shields.io/badge/node-%3E%3D20.19-3c873a.svg)](./package.json)
+
+MuncheKit은 **한국어 문체 린터·윤문 툴킷**이다. 맞춤법만 찾거나 “AI가 쓴 글인지” 판정하지 않는다. Markdown, MDX, HTML, JSX, TSX, `ko.json` 안의 한국어 카피를 골라 다음을 알려준다.
+
+- 어느 표현이 걸렸는지: 파일·줄·열·UTF-16 범위
+- 왜 어색할 수 있는지: 규칙별 근거와 신뢰도
+- 무엇을 바꿀 수 있는지: 검토용 제안 또는 안전 자동수정
+- 무엇을 건드리지 않았는지: 코드·URL·수치·보존 용어·문서 구조
+
+핵심 비유는 **ESLint for Korean product copy**다. “사람처럼 보이게 만드는 프롬프트”보다 코드베이스에서 반복 실행하고 PR에서 검증할 수 있는 도구에 가깝다.
+
+![MuncheKit social preview](https://raw.githubusercontent.com/ongsi2/munchekit/main/assets/social-preview.png)
+
+## 10초 예시
+
+원문:
+
+```text
+새 검색 기능을 통해서 사용자는 원하는 문서에 대해서 매우 빠르게 찾을 수 있습니다.
+또한 다양한 검색 조건을 활용할 수 있습니다.
+```
+
+```console
+$ npx munchekit lint copy.txt --profile web
+copy.txt:1:6  info  수단을 나타내는 말이 아니라면 ‘~으로’ 또는 직접적인 동사를 검토하세요.  KO-CALQUE-002
+  새 검색 기능을 통해서 사용자는 원하는 문서에 대해서 매우 빠르게 찾을 수 있습니다.
+  ↳ 근거 (76%): 추상 명사 뒤의 ‘통해서’는 번역투와 불필요한 우회 표현이 되기 쉽습니다.
+  ↳ 제안: 예: “검색 기능을 통해 찾는다” → “검색 기능으로 찾는다”
+```
+
+기본 출력은 같은 원문에서 `KO-CALQUE-001`, `KO-VAGUE-001`, `KO-POSS-001` 2건, `KO-VAGUE-002`까지 총 6건을 같은 형식으로 보여준다. 좌표는 각각 `1:23`, `1:31`, `1:38`, `2:4`, `2:15`이며 요약은 `0 error · 2 warning · 4 info · 0 safe fix`다.
+
+사람이 검토하거나 선택형 Claude 윤문을 거친 후보:
+
+```text
+새 검색 기능으로 원하는 문서를 더 빨리 찾고, 여러 검색 조건도 쓸 수 있습니다.
+```
+
+`lint`는 원문을 바꾸지 않는다. `fix`도 의미와 말투가 달라질 수 있는 항목은 손대지 않는다. 위처럼 문장 구조가 달라지는 수정은 항상 검토 대상으로 남는다.
+
+## 설치와 실행
+
+Node.js 20.19.0 이상이 필요하다.
+
+```bash
+# 설치 없이 한 번 실행
+npx munchekit check messages/ko.json --profile web
+
+# 프로젝트에 고정
+npm install --save-dev munchekit
+npx munche init
+```
+
+주요 명령:
+
+```bash
+munche lint "content/**/*.md"               # 진단
+munche check messages/ko.json --profile web  # warning이 있으면 exit 1
+munche fix post.md                            # 안전 수정 diff
+munche fix post.md --write                    # 안전 수정 적용
+munche lint src --output json                 # 구조화된 결과
+munche lint src --output sarif                # GitHub 코드 스캐닝 형식
+munche explain KO-NOM-001                     # 규칙 설명
+```
+
+`munche`와 `munchekit` 두 실행 이름을 모두 제공한다.
+
+## 무엇을 검사하나
+
+| 범주 | 찾는 예 | 기본 처리 |
+|---|---|---|
+| 번역투 | `~에 대해서`, 추상적인 `~을 통해서`, 반복되는 `기반` | 검토 제안 |
+| 명사화·겹말 | `검토를 진행했다`, `사전에 미리`, `약 10개 정도` | 문맥을 확인하는 review |
+| 피동·가능 표현 | `되어지다`, 기능 나열형 `~할 수 있다` | safe 또는 검토 |
+| 모호한 평가 | `매우`, `혁신적인`, `강력한`, `다양한` | 근거 요청 |
+| 생성형 상투어 | `단순한 A를 넘어 B`, `새로운 가능성을 열다` | 검토 제안 |
+| 흐름·리듬 | 접속어, 주어, 종결 반복, 긴 문장과 빽빽한 문단 | 진단만 |
+| 격식 | `~다`, `~습니다`, `~해요` 혼용 | 프리셋별 제안 |
+| 문장부호·띄어쓰기 | `!!`, 고신뢰 `~할수있다` | safe fix |
+
+초기 규칙팩의 전체 메타데이터와 반례는 [docs/rules.md](./docs/rules.md)에 있다. 규칙은 단어 금지 목록이 아니다. 예를 들어 `터널을 통해서 들어왔다`는 자연스러운 물리 경로이므로 `KO-CALQUE-002`가 잡지 않는다.
+
+## 코드 구조를 먼저 본다
+
+| 형식 | 분석하는 곳 | 기본 보호 |
+|---|---|---|
+| Plain text | 전체 본문 | URL, 이메일, 코드, 직접 인용 |
+| Markdown / MDX | 텍스트 AST 노드 | frontmatter·코드·MDX 표현·링크 목적지 |
+| JSON / JSONC | 문자열 값 | 키와 구문 토큰 |
+| HTML | 보이는 텍스트, `alt`, `aria-label`, `placeholder`, `title`, 텍스트 메타데이터 | 태그·`script`·`style`·`code`·`pre`·`template`·URL 메타데이터 |
+| JS / JSX / TS / TSX | JSX 텍스트와 사용자 노출 속성, 한국어 문자열 값 | import·route·computed key·타입·코드/`pre` 구문 |
+
+파싱이 실패하면 plain text로 몰래 폴백하지 않고 `KO-PARSE-001` 오류를 반환한다. 코드가 한국어로 오인되는 것보다 검사를 멈추는 편이 안전하기 때문이다.
+
+JSON 값과 일반 JavaScript/TypeScript 문자열은 화면 문구일 수도 있지만 조회 키, 정규식, API payload일 수도 있다. 그래서 진단은 하되 모든 수정안을 `review`로 강등한다. `fix`가 안전 자동수정할 수 있는 코드 영역은 JSX 텍스트와 명시적으로 허용한 사용자 노출 속성뿐이다.
+
+## 설정
+
+`munche init`으로 `.munche.json`을 만든다.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/ongsi2/munchekit/v0.1.0/schema/munche.schema.json",
+  "profile": "web",
+  "files": ["content/**/*.{md,mdx}", "messages/ko.json", "src/**/*.{jsx,tsx}"],
+  "ignore": ["**/*.test.*", "**/__snapshots__/**"],
+  "preserveTerms": ["MuncheKit", "Next.js", "displayName"],
+  "preservePatterns": ["\\bTICKET-[0-9]+\\b"],
+  "rules": {
+    "KO-REGISTER-001": "warning",
+    "KO-END-001": "info"
+  }
+}
+```
+
+프리셋:
+
+- `natural`: 원래 말투를 유지하는 보수적 기본값
+- `web`: 짧고 직접적인 존댓말 제품 카피
+- `tech-blog`: 구체적인 사실과 평서체 중심 기술 글
+- `business`: 격식을 유지하는 업무 문서
+- `thmm-tech`: 실제 개인 스타일 가이드에서 분리한 선택 프리셋
+
+의도한 표현은 소스에서 억제할 수 있다.
+
+```md
+<!-- munche-disable KO-VAGUE-002 -->
+이 구간의 ‘강력한’은 제품 등급의 공식 명칭이다.
+<!-- munche-enable -->
+
+이 줄만 무시한다. <!-- munche-ignore KO-END-001 -->
+<!-- munche-disable-next-line KO-CALQUE-001 -->
+다음 줄의 표현은 원문 인용이다.
+```
+
+## 라이브러리 API
+
+```ts
+import { analyze, applyFixes } from 'munchekit';
+
+const source = '결과가 저장되어진다!!';
+const report = analyze(source, {
+  profile: 'web',
+  filePath: 'post.md',
+  preserveTerms: ['displayName'],
+});
+
+const fixed = applyFixes(source, report);
+console.log(fixed.text);
+// 결과가 저장된다!
+```
+
+`Diagnostic`에는 `ruleId`, `severity`, `confidence`, `range`, `location`, `rationale`, `suggestions`, `fixability`가 들어간다. 오프셋은 JavaScript와 LSP가 쓰는 UTF-16 code unit 기준이다.
+
+`--output json`의 공개 계약은 [MuncheKit JSON report schema](./schema/munche-report.schema.json)에서 확인할 수 있다.
+
+## 선택형 Claude 윤문
+
+로컬 규칙만으로 문장 구조 전체를 자연스럽게 다시 쓰기는 어렵다. `rewrite`는 이 단계만 Claude Messages API에 위임한다.
+
+```bash
+ANTHROPIC_API_KEY=... \
+  npx munchekit rewrite post.md --model <사용할-Claude-모델-ID>
+```
+
+모델 ID는 빠르게 바뀌므로 기본값을 코드에 박지 않는다. 출력은 기본적으로 화면에만 보이며 `--write`를 줘야 파일에 쓴다.
+
+기본 endpoint는 `https://api.anthropic.com`이다. Anthropic 호환 서비스가 필요하면 `--base-url <HTTPS URL>`을 쓸 수 있지만 API key와 segment가 그 주소로 전송되므로 직접 신뢰하는 endpoint만 지정해야 한다.
+
+재작성은 모델이 문서 전체를 돌려주는 방식이 아니다. 파서가 다듬어도 되는 한국어 span만 독립 segment로 보내고, 코드·태그·URL·수치·인용문·보존 용어가 있던 자리는 로컬 원본에 그대로 둔다. 응답의 segment만 원래 범위에 다시 끼운 뒤 다음 조건을 검사한다.
+
+- segment의 개수·ID·순서가 같은가
+- 수치, 부정, 가능·의무·추측, URL, 코드, 보존 용어의 multiset이 같은가
+- 후보가 원래 JSON/HTML/TSX/Markdown 구조로 다시 파싱되고 구조 signature가 같은가
+- 문서 전체와 각 segment의 변경 비율이 설정 한도를 넘지 않았나
+
+하나라도 어기면 후보를 폐기하고 원문을 돌려준다. 통과해도 의미 보존을 증명한 것은 아니므로 Claude 결과는 언제나 **review**다. API 요청 형식은 [Anthropic Messages API 문서](https://docs.anthropic.com/en/api/messages)를 따른다.
+
+릴리스 후보에 사용한 읽기 전용 Claude Code 점검 방법, 재현한 지적, 수용·기각 근거는 [교차 검토 기록](./docs/reviews/claude-2026-08-25.md)에 남겼다. 다른 모델의 동의만으로 규칙을 `safe`로 올리지는 않는다.
+
+## 맞춤법 검사기나 humanizer와 무엇이 다른가
+
+| 도구 | 주된 질문 | 코드 인식 | 설명 가능한 위치 진단 | 자동수정 정책 |
+|---|---|---:|---:|---|
+| 맞춤법 검사기 | 규범상 틀렸나 | 보통 없음 | 일부 | 문법 교정 |
+| 일반 LLM 윤문 | 더 잘 쓸 수 있나 | 프롬프트에 따라 다름 | 보통 없음 | 문장 전체 재작성 |
+| AI 탐지/우회 도구 | AI처럼 보이나 | 도구마다 다름 | 신호 점수 중심 | 탐지 점수 감소 |
+| MuncheKit | 이 코드의 한국어가 왜 어색할 수 있나 | 예 | 파일·줄·span | safe와 review 분리 |
+
+MuncheKit은 저자가 사람인지 AI인지 판별하지 않으며 탐지기 우회를 목표로 하지 않는다. “AI 티 제거”, “GPT 문체 제거”, “한국어 humanizer”를 찾다가 온 사용자에게도 같은 원칙을 적용한다. 출처가 아니라 문장 안의 구체적인 문제만 다룬다.
+
+## 개인정보와 한계
+
+- `lint`, `check`, `fix`는 네트워크를 쓰지 않는다.
+- `rewrite`만 사용자가 지정한 Anthropic endpoint로 보호 처리된 문서를 보낸다.
+- 로컬 pretty/JSON/SARIF 보고서의 `excerpt`에는 진단 주변 원문이 들어갈 수 있으므로, 보고서를 외부에 공유하기 전에 민감 정보를 확인해야 한다. 이 excerpt 필드는 provider 요청에는 넣지 않는다.
+- provider는 기본적으로 HTTPS만 허용하고 redirect를 거부하며, 응답 시간·크기를 제한한다.
+- CLI는 기본적으로 작업 루트 밖 파일과 심볼릭 링크를 거부한다. 루트 밖의 명시 경로를 읽어야 할 때만 `--allow-outside-root`를 사용한다.
+- 현재 코어는 형태소 분석기 없이 고정밀 패턴과 문서 구조를 쓴다. 모든 문체 문제를 찾지 못한다.
+- JSON·JavaScript·TypeScript 문자열에 escape가 들어가 원문 오프셋과 디코딩 값이 달라지면 보수적으로 건너뛴다.
+- 제안은 사실 검증이나 법률·의료 교열을 대신하지 않는다.
+- “자연스러움”은 하나의 정답이 아니다. 프리셋과 억제 기능이 있는 이유다.
+
+## 평가와 로드맵
+
+현재 저장소에는 규칙별 최소 대조쌍과 코드 구조 공격 테스트가 있다. 릴리스 수치는 [평가 문서](./docs/evaluation.md)에 측정 명령과 함께 공개한다. 목표는 recall보다 precision이다.
+
+- [x] Plain/Markdown/MDX/JSON/HTML/JSX/TSX 추출
+- [x] pretty/JSON/SARIF, CLI와 TypeScript API
+- [x] safe fix, 억제 지시문, 겹침·수정량 방어
+- [x] 선택형 Claude provider와 의미 보존 guard
+- [ ] 저자·장르를 분리한 500개 이상 clean benchmark
+- [ ] YAML과 ICU MessageFormat 전용 추출기
+- [ ] optional Kiwi 형태 분석 adapter
+- [ ] GitHub Action 패키지와 PR annotation
+- [ ] 같은 코어를 쓰는 웹 playground
+
+## 기여
+
+새 규칙에는 반드시 실제 전후 예문, 잡지 말아야 할 반례, 수정 위험 등급, 테스트가 필요하다. 자세한 절차는 [CONTRIBUTING.md](./CONTRIBUTING.md)에 있다. 오탐 한 건도 좋은 기여다.
+
+MIT © 2026 ongsi2

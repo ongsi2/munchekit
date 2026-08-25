@@ -1,0 +1,102 @@
+{
+  "name": "munchekit",
+  "version": "0.1.0",
+  "description": "An explainable Korean prose linter and safe rewriting toolkit for product copy, docs, and localization files.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "munche": "dist/cli.js",
+    "munchekit": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./schema/munche.schema.json": "./schema/munche.schema.json",
+    "./schema/munche-report.schema.json": "./schema/munche-report.schema.json"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "schema",
+    "README.md",
+    "README.en.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:package": "node scripts/package-smoke.mjs",
+    "verify": "npm run check && npm run test:coverage && npm run build",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check && npm run test:coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ongsi2/munchekit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ongsi2/munchekit/issues"
+  },
+  "homepage": "https://github.com/ongsi2/munchekit#readme",
+  "keywords": [
+    "korean",
+    "korean-nlp",
+    "korean-writing",
+    "prose-linter",
+    "copyediting",
+    "translationese",
+    "localization",
+    "i18n",
+    "humanizer",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "MIT",
+  "author": "ongsi2",
+  "dependencies": {
+    "@babel/parser": "^7.29.8",
+    "diff": "^9.0.0",
+    "fast-glob": "^3.3.3",
+    "jsonc-parser": "^3.3.1",
+    "parse5": "^8.0.1",
+    "picocolors": "^1.1.1",
+    "remark-mdx": "^3.1.1",
+    "remark-parse": "^11.0.0",
+    "safe-regex2": "^5.1.1",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^20.19.43",
+    "@vitest/coverage-v8": "^4.1.11",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "esbuild": "0.28.2"
+  },
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "tests"
+  }
+}

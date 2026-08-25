@@ -1,0 +1,50 @@
+{"id":"calque-about-positive","text":"새 기능에 대해서 설명했다.","expect":["KO-CALQUE-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"calque-about-negative","text":"새 기능을 설명했다.","expect":[],"reject":["KO-CALQUE-001"],"source":"synthetic","license":"MIT"}
+{"id":"calque-through-positive","text":"검색 기능을 통해서 문서를 찾았다.","expect":["KO-CALQUE-002"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"calque-through-negative","text":"터널을 통해서 반대편으로 갔다.","expect":[],"reject":["KO-CALQUE-002"],"source":"synthetic","license":"MIT"}
+{"id":"calque-based-positive","text":"사용자 데이터에 기반한 추천이다.","expect":["KO-CALQUE-003"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"calque-based-negative","text":"사용자 데이터를 분석해 추천했다.","expect":[],"reject":["KO-CALQUE-003"],"source":"synthetic","license":"MIT"}
+{"id":"nominalization-positive","text":"설계 검토를 진행했다.","expect":["KO-NOM-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"nominalization-negative","text":"행사를 예정대로 진행했다.","expect":[],"reject":["KO-NOM-001"],"source":"synthetic","license":"MIT"}
+{"id":"redundant-pair-positive","text":"배포 전에 미리 사전에 확인했다.","expect":["KO-RED-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"redundant-pair-negative","text":"배포 전에 미리 확인했다.","expect":[],"reject":["KO-RED-001"],"source":"synthetic","license":"MIT"}
+{"id":"approximation-positive","text":"약 10개 정도를 옮겼다.","expect":["KO-RED-002"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"approximation-negative","text":"10개 정도를 옮겼다.","expect":[],"reject":["KO-RED-002"],"source":"synthetic","license":"MIT"}
+{"id":"double-passive-positive","text":"설정이 자동으로 저장되어진다.","expect":["KO-VOICE-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"double-passive-negative","text":"설정이 자동으로 저장된다.","expect":[],"reject":["KO-VOICE-001"],"source":"synthetic","license":"MIT"}
+{"id":"possibility-positive","text":"원하는 문서를 찾을 수 있습니다.","expect":["KO-POSS-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"possibility-negative","text":"권한이 있어야 문서를 볼 수 있습니다.","expect":[],"reject":["KO-POSS-001"],"source":"synthetic","license":"MIT"}
+{"id":"intensifier-positive","text":"검색 속도가 매우 빠르다.","expect":["KO-VAGUE-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"intensifier-negative","text":"검색 시간이 800ms에서 120ms로 줄었다.","expect":[],"reject":["KO-VAGUE-001"],"source":"synthetic","license":"MIT"}
+{"id":"praise-positive","text":"강력한 검색 기능이다.","expect":["KO-VAGUE-002"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"praise-negative","text":"제목과 본문을 함께 검색한다.","expect":[],"reject":["KO-VAGUE-002"],"source":"synthetic","license":"MIT"}
+{"id":"boiler-intro-positive","text":"오늘날 데이터 보안의 중요성이 커지고 있습니다.","expect":["KO-BOILER-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"boiler-intro-negative","text":"지난주 인증서가 만료돼 배포가 멈췄다.","expect":[],"reject":["KO-BOILER-001"],"source":"synthetic","license":"MIT"}
+{"id":"pair-positive","text":"단순한 검색 도구를 넘어 새로운 경험을 제공한다.","expect":["KO-PAIR-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"pair-negative","text":"검색어를 입력하면 제목과 본문을 함께 찾는다.","expect":[],"reject":["KO-PAIR-001"],"source":"synthetic","license":"MIT"}
+{"id":"ai-cliche-positive","text":"이 기능은 새로운 가능성을 열어 줍니다.","expect":["KO-AI-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"ai-cliche-negative","text":"이 기능으로 응답 시간을 4초 줄였습니다.","expect":[],"reject":["KO-AI-001"],"source":"synthetic","license":"MIT"}
+{"id":"long-sentence-positive","text":"요청을 받은 서버는 사용자 권한을 확인하고 캐시에서 기존 값을 찾지만 값이 없으면 데이터베이스에 다시 질의하고, 조회 결과를 직렬화해서 응답 본문을 만든 뒤 압축 여부를 판단하며, 마지막으로 추적 ID를 헤더에 넣어서 클라이언트에 돌려보내고 로그에도 같은 값을 기록한다.","expect":["KO-LEN-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"long-sentence-negative","text":"서버는 권한을 확인한다. 값이 없으면 데이터베이스를 조회한다.","expect":[],"reject":["KO-LEN-001"],"source":"synthetic","license":"MIT"}
+{"id":"paragraph-positive","text":"첫 로그를 봤다. 값이 비어 있었다. 설정을 확인했다. 경로가 달랐다. 경로를 고쳤다. 다시 실행했다.","expect":["KO-PARA-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"paragraph-negative","text":"첫 로그를 봤다. 값이 비어 있었다. 설정을 고쳤다.","expect":[],"reject":["KO-PARA-001"],"source":"synthetic","license":"MIT"}
+{"id":"ending-positive","text":"설정을 확인합니다. 경로를 확인합니다. 로그를 확인합니다. 결과를 확인합니다.","expect":["KO-END-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"ending-negative","text":"설정을 확인했다. 경로가 달랐다. 로그를 다시 봤다. 결과를 기록했다.","expect":[],"reject":["KO-END-001"],"source":"synthetic","license":"MIT"}
+{"id":"register-positive","text":"설정을 바꿨다. 서버를 띄웠다. 로그를 확인합니다. 결과를 기록합니다.","expect":["KO-REGISTER-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"register-negative","text":"설정을 바꿨다. 서버를 띄웠다. 로그를 확인했다. 결과를 기록했다.","expect":[],"reject":["KO-REGISTER-001"],"source":"synthetic","license":"MIT"}
+{"id":"connective-positive","text":"또한 로그를 봤다. 따라서 설정을 고쳤다. 하지만 오류가 남았다. 그러나 원인은 달랐다.","expect":["KO-CONNECT-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"connective-negative","text":"로그를 봤다. 설정을 고쳤다. 오류가 사라졌다.","expect":[],"reject":["KO-CONNECT-001"],"source":"synthetic","license":"MIT"}
+{"id":"subject-positive","text":"사용자는 문서를 찾습니다. 사용자는 결과를 저장합니다.","expect":["KO-PRON-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"subject-negative","text":"사용자는 문서를 찾습니다. 결과를 저장합니다.","expect":[],"reject":["KO-PRON-001"],"source":"synthetic","license":"MIT"}
+{"id":"polite-positive","text":"변경 내용을 안내해 드리도록 하겠습니다.","expect":["KO-POLITE-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"polite-negative","text":"변경 내용을 안내하겠습니다.","expect":[],"reject":["KO-POLITE-001"],"source":"synthetic","license":"MIT"}
+{"id":"meta-positive","text":"이 글이 도움이 되었기를 바랍니다.","expect":["KO-META-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"meta-negative","text":"전체 설정은 예제 저장소에서 확인할 수 있다.","expect":[],"reject":["KO-META-001"],"source":"synthetic","license":"MIT"}
+{"id":"punctuation-repeat-positive","text":"지금 시작하세요!!","expect":["KO-PUNCT-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"punctuation-repeat-negative","text":"지금 시작하세요!","expect":[],"reject":["KO-PUNCT-001"],"source":"synthetic","license":"MIT"}
+{"id":"punctuation-density-positive","text":"지금 시작하세요! 설정을 고르세요! 결과를 확인하세요!","expect":["KO-PUNCT-002"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"punctuation-density-negative","text":"지금 시작하세요! 결과를 확인하세요.","expect":[],"reject":["KO-PUNCT-002"],"source":"synthetic","license":"MIT"}
+{"id":"plural-positive","text":"여러 사용자들이 결과를 확인했다.","expect":["KO-PLURAL-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"plural-negative","text":"여러 사용자가 결과를 확인했다.","expect":[],"reject":["KO-PLURAL-001"],"source":"synthetic","license":"MIT"}
+{"id":"spacing-positive","text":"문서를 찾을수있다.","expect":["KO-SPACE-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"spacing-negative","text":"함수있음은 내부 식별자다.","expect":[],"reject":["KO-SPACE-001"],"source":"synthetic","license":"MIT"}

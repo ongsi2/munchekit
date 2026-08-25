@@ -1,0 +1,41 @@
+name: 새 규칙 제안
+description: 관찰 가능한 한국어 문체 규칙을 제안합니다.
+title: "[rule] "
+labels: [rule-proposal]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 관찰 가능한 문제
+      description: “AI 같다” 대신 어떤 언어 특징인지 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: positive
+    attributes:
+      label: 걸려야 할 예문과 선호 표현
+    validations:
+      required: true
+  - type: textarea
+    id: negatives
+    attributes:
+      label: 잡지 말아야 할 반례 두 개 이상
+    validations:
+      required: true
+  - type: dropdown
+    id: safety
+    attributes:
+      label: 수정 위험
+      options: [review, diagnostic-only, safe]
+    validations:
+      required: true
+  - type: textarea
+    id: invariant
+    attributes:
+      label: 바뀌면 안 되는 의미와 형식
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 근거 또는 참고 자료

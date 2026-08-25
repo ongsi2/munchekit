@@ -29,7 +29,7 @@ MuncheKit은 **한국어 문체 린터·윤문 툴킷**이다. 맞춤법만 찾�
 ```
 
 ```console
-$ npx --yes github:ongsi2/munchekit lint copy.txt --profile web
+$ npx --yes github:ongsi2/munchekit#v0.1.0 lint copy.txt --profile web
 copy.txt:1:6  info  수단을 나타내는 말이 아니라면 ‘~으로’ 또는 직접적인 동사를 검토하세요.  KO-CALQUE-002
   새 검색 기능을 통해서 사용자는 원하는 문서에 대해서 매우 빠르게 찾을 수 있습니다.
   ↳ 근거 (76%): 추상 명사 뒤의 ‘통해서’는 번역투와 불필요한 우회 표현이 되기 쉽습니다.
@@ -50,14 +50,14 @@ copy.txt:1:6  info  수단을 나타내는 말이 아니라면 ‘~으로’ 또
 
 Node.js 20.19.0 이상이 필요하다.
 
-현재 npm 패키지는 첫 태그 릴리스를 준비 중이다. 그전에도 공개 GitHub 소스에서 바로 실행하거나 프로젝트에 고정할 수 있다.
+현재 npm 패키지는 아직 게시 전이다. 대신 공개 GitHub v0.1.0 소스 릴리스를 바로 실행하거나 프로젝트에 고정할 수 있다.
 
 ```bash
 # 공개 GitHub 소스를 설치 없이 한 번 실행
-npx --yes github:ongsi2/munchekit check messages/ko.json --profile web
+npx --yes github:ongsi2/munchekit#v0.1.0 check messages/ko.json --profile web
 
 # 프로젝트에 고정
-npm install --save-dev github:ongsi2/munchekit
+npm install --save-dev github:ongsi2/munchekit#v0.1.0
 npx munche init
 ```
 
@@ -172,7 +172,7 @@ console.log(fixed.text);
 
 ```bash
 ANTHROPIC_API_KEY=... \
-  npx --yes github:ongsi2/munchekit rewrite post.md --model <사용할-Claude-모델-ID>
+  npx --yes github:ongsi2/munchekit#v0.1.0 rewrite post.md --model <사용할-Claude-모델-ID>
 ```
 
 모델 ID는 빠르게 바뀌므로 기본값을 코드에 박지 않는다. 출력은 기본적으로 화면에만 보이며 `--write`를 줘야 파일에 쓴다.

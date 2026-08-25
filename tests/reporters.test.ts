@@ -19,6 +19,17 @@ describe('pretty reporter', () => {
     expect(output).toContain('KO-VAGUE-001');
   });
 
+  it('prints an exact replacement when a review suggestion provides one', () => {
+    const output = prettyReport(analyze('가지런한 치아는 서두르지 않고 만듭니다.', { profile: 'web' }), { color: false });
+
+    expect(output).toContain('KO-ATTACH-001');
+    expect(output).toContain('제안 1:');
+    expect(output).toContain('이 범위를 “치아를 만들기 위해 서두르지 않습니다”로 바꿔');
+    expect(output).toContain('범위 교체 1: 치아를 만들기 위해 서두르지 않습니다');
+    expect(output).toContain('제안 2:');
+    expect(output).toContain('범위 교체 2: 치아를 서두르지 않고 만듭니다');
+  });
+
   it('strips terminal control sequences from paths and excerpts', () => {
     const output = prettyReport(analyze('\u001B[31m매우 빠르다.', { filePath: '\u001B]8;;bad\u0007copy.txt' }), { color: false });
 

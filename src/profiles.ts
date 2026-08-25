@@ -20,6 +20,7 @@ export const profiles: Record<ProfileName, StyleProfile> = {
     maxParagraphSentences: 4,
     connectiveThreshold: 2,
     ruleLevels: {
+      'KO-ATTACH-001': 'warning',
       'KO-LEN-001': 'warning',
       'KO-VAGUE-001': 'warning',
       'KO-VAGUE-002': 'warning',

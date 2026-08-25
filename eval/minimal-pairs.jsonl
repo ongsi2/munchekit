@@ -48,3 +48,5 @@
 {"id":"plural-negative","text":"여러 사용자가 결과를 확인했다.","expect":[],"reject":["KO-PLURAL-001"],"source":"synthetic","license":"MIT"}
 {"id":"spacing-positive","text":"문서를 찾을수있다.","expect":["KO-SPACE-001"],"reject":[],"source":"synthetic","license":"MIT"}
 {"id":"spacing-negative","text":"함수있음은 내부 식별자다.","expect":[],"reject":["KO-SPACE-001"],"source":"synthetic","license":"MIT"}
+{"id":"attachment-purpose-positive","text":"가지런한 치아는 서두르지 않고 만듭니다.","expect":["KO-ATTACH-001"],"reject":[],"source":"synthetic","license":"MIT"}
+{"id":"attachment-purpose-negative","text":"가지런한 치아를 만들기 위해 서두르지 않습니다.","expect":[],"reject":["KO-ATTACH-001"],"source":"synthetic","license":"MIT"}

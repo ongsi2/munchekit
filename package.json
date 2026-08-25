@@ -1,7 +1,7 @@
 {
   "name": "munchekit",
-  "version": "0.1.0",
-  "description": "An explainable Korean prose linter and safe rewriting toolkit for product copy, docs, and localization files.",
+  "version": "0.2.0",
+  "description": "An explainable Korean prose linter and guarded copyediting toolkit for product copy, docs, and localization files.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

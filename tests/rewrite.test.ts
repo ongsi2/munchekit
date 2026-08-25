@@ -7,6 +7,10 @@ import type { RewriteProvider, RewriteProviderRequest } from '../src/types.js';
 interface PromptSegment {
   id: string;
   text: string;
+  findings?: Array<{
+    ruleId: string;
+    suggestions: Array<{ replacement?: string; message: string; risk: string }>;
+  }>;
   reason?: string;
   ruleIds?: string[];
 }
@@ -21,13 +25,302 @@ function providerWith(transform: (segments: PromptSegment[], request: RewritePro
   return {
     name: 'mock',
     async complete(request) {
-      const segments = segmentsFromPrompt(request.prompt);
+      const segments = segmentsFromPrompt(request.prompt).map(({ id, text }) => ({ id, text }));
       return JSON.stringify({ segments: transform(segments, request) });
     },
   };
 }
 
 describe('guarded rewrite', () => {
+  it('sends exact local suggestions under a minimum-copyedit contract', () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const { request } = buildRewriteRequest(source, { profile: 'web' });
+    const payload = segmentsFromPrompt(request.prompt);
+
+    expect(request.system).toContain('카피라이터가 아니라 한국어 최소 교정자');
+    expect(request.system).toContain('원문에 없는 속성, 효과, 혜택');
+    expect(request.system).toContain('조사 역할, 서술어 논항');
+    expect(payload[0]?.findings?.[0]?.ruleId).toBe('KO-ATTACH-001');
+    expect(payload[0]?.findings?.[0]?.suggestions[0]?.replacement).toBe('치아를 만들기 위해 서두르지 않습니다');
+  });
+
+  it('accepts the intended minimal repair and canonicalizes negation inflection', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: segment.text.replace(source, '가지런한 치아를 만들기 위해 서두르지 않습니다.'),
+      reason: '조사와 절 관계만 바로잡음',
+      ruleIds: ['KO-ATTACH-001'],
+    })));
+    const result = await rewrite(source, { provider, profile: 'web' });
+
+    expect(result.accepted).toBe(true);
+    expect(result.text).toBe('가지런한 치아를 만들기 위해 서두르지 않습니다.');
+    expect(result.changedCharsRatio).toBeLessThanOrEqual(0.35);
+    expect(result.violations).toEqual([]);
+  });
+
+  it('never lets an exact suggestion override an explicitly supplied change limit', async () => {
+    const source = '치아는 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '치아를 만들기 위해 서두르지 않습니다.',
+      ruleIds: ['KO-ATTACH-001'],
+    })));
+    const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 0 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/수정 비율/u);
+  });
+
+  it('rejects invented claims even when the character-change budget is fully open', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const candidates = [
+      '건강한 치아는 서두르지 않고 만듭니다.',
+      '가지런한 치아는 안전하게 만듭니다.',
+      '정밀한 진단을 바탕으로 가지런한 치아를 교정합니다.',
+      '오래 유지되는 가지런한 치아를 만듭니다.',
+      '서두르지 않기에 보다 가지런한 치아가 완성됩니다.',
+      'premium 치아는 서두르지 않고 만듭니다.',
+    ];
+
+    for (const candidate of candidates) {
+      const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: candidate })));
+      const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+      expect(result.accepted, candidate).toBe(false);
+      expect(result.text).toBe(source);
+      expect(result.violations.join(' ')).toMatch(/내용어/u);
+    }
+  });
+
+  it('rejects deletion of negation instead of treating it as a harmless ending change', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '가지런한 치아를 만들기 위해 서두릅니다.',
+    })));
+    const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/부정·양태/u);
+  });
+
+  it('does not treat every content word inside a broad finding as removable', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    for (const candidate of ['가지런한 치아는 서두르지 않습니다.', '가지런한 않습니다.']) {
+      const provider = providerWith((segments) => segments.map((segment) => ({
+        id: segment.id,
+        text: candidate,
+      })));
+      const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+
+      expect(result.accepted, candidate).toBe(false);
+      expect(result.violations.join(' ')).toMatch(/내용어를 삭제/u);
+    }
+  });
+
+  it('rejects a rewrite that introduces a new lint finding', async () => {
+    const source = '가지런한 치아를 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '가지런한 치아는 서두르지 않고 만듭니다.',
+    })));
+    const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toContain('KO-ATTACH-001');
+  });
+
+  it('preserves register unless a local register finding authorizes a change', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '가지런한 치아를 서두르지 않고 만든다.',
+    })));
+    const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/종결 말투/u);
+  });
+
+  it('does not treat a sentence-level register finding as permission to delete facts', async () => {
+    const source = '제품은 빠르다. 서비스는 안전합니다. 결과는 정확합니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '서비스는 안전합니다. 결과는 정확합니다.',
+    })));
+    const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/내용어를 삭제/u);
+  });
+
+  it('detects removal of one repeated content-word occurrence', async () => {
+    const source = '중요 중요';
+    const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: '중요' })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/내용어를 삭제/u);
+  });
+
+  it('binds negation to its neighboring predicate instead of comparing only global counts', async () => {
+    const source = '저는 안 가고 그는 옵니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '저는 가고 그는 안 옵니다.',
+    })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/부정·양태/u);
+  });
+
+  it('rejects an unapproved change from a manner relation to a causal relation', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '서두르지 않기에 가지런한 치아를 만듭니다.',
+    })));
+    const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/부정·양태/u);
+  });
+
+  it.each([
+    ['문제가 없어서 진행합니다.', '문제가 없으면 진행합니다.'],
+    ['사실이 아니어서 보류합니다.', '사실이 아니면 보류합니다.'],
+    ['검토가 필요해서 기다립니다.', '검토가 필요하면 기다립니다.'],
+    ['지금 확인할 수 있어서 진행합니다.', '지금 확인할 수 있으면 진행합니다.'],
+    ['문제가 없으니 진행합니다.', '문제가 없거든 진행합니다.'],
+  ])('preserves causal and conditional relations: %s', async (source, candidate) => {
+    const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: candidate })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/부정·양태/u);
+  });
+
+  it.each([
+    ['문서를 검토한다.', '문서를 검토했다.'],
+    ['제품을 설계한다.', '제품을 설계하였다.'],
+  ])('preserves tense: %s', async (source, candidate) => {
+    const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: candidate })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/시제/u);
+  });
+
+  it.each([
+    ['의사가 환자를 치료합니다.', '의사를 환자가 치료합니다.'],
+    ['사용자가 문서를 찾습니다.', '사용자를 문서가 찾습니다.'],
+  ])('preserves subject and object particle roles: %s', async (source, candidate) => {
+    const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: candidate })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/조사 역할/u);
+  });
+
+  it.each(['치료를 시작합니다?', '치료를 시작합니다!'])(
+    'preserves sentence force: %s',
+    async (candidate) => {
+      const source = '치료를 시작합니다.';
+      const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: candidate })));
+      const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+      expect(result.accepted).toBe(false);
+      expect(result.violations.join(' ')).toMatch(/종결 부호/u);
+    },
+  );
+
+  it('allows adding a declarative full stop without changing sentence force', async () => {
+    const source = '치료를 시작합니다';
+    const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: `${segment.text}.` })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(true);
+    expect(result.text).toBe('치료를 시작합니다.');
+  });
+
+  it('treats a regular past form and its contraction as the same tense', async () => {
+    const source = '보았습니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: '봤습니다.' })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(true);
+    expect(result.text).toBe('봤습니다.');
+  });
+
+  it('allows only the two exact local candidates when KO-ATTACH-001 is present', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const candidates = [
+      '치아는 가지런한 서두르지 않고 만듭니다.',
+      '치아는 서두르지 않고 가지런한 만듭니다.',
+    ];
+    for (const candidate of candidates) {
+      const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: candidate })));
+      const result = await rewrite(source, { provider, profile: 'web' });
+      expect(result.accepted, candidate).toBe(false);
+      expect(result.violations.join(' ')).toContain('KO-ATTACH-001');
+    }
+  });
+
+  it('preserves shared content-word order for non-deterministic edits', async () => {
+    const source = '가지런한 치아를 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '치아를 가지런한 서두르지 않고 만듭니다.',
+    })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/상대 순서/u);
+  });
+
+  it('allows purpose markers only when an exact local suggestion introduces them', async () => {
+    const source = '가지런한 치아를 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: '가지런한 치아를 위해 서두르지 않고 만듭니다.',
+    })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/내용어를 추가/u);
+  });
+
+  it('does not erase restrictive or additive particles during lexical validation', async () => {
+    const cases: Array<[string, string]> = [
+      ['가지런한 치아는 서두르지 않고 만듭니다.', '가지런한 치아만 서두르지 않고 만듭니다.'],
+      ['모든 환자를 진료합니다.', '모든 환자만 진료합니다.'],
+      ['환자를 진료합니다.', '환자도 진료합니다.'],
+    ];
+    for (const [source, candidate] of cases) {
+      const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: candidate })));
+      const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+      expect(result.accepted, candidate).toBe(false);
+      expect(result.violations.join(' ')).toMatch(/내용어/u);
+    }
+  });
+
+  it('composes an exact attachment repair with a conservative edit in the next sentence', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다. 매우 강력한 기능입니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: segment.text
+        .replace('가지런한 치아는 서두르지 않고 만듭니다.', '가지런한 치아를 만들기 위해 서두르지 않습니다.')
+        .replace('매우 강력한 기능입니다.', '기능입니다.'),
+      ruleIds: segment.text.includes('치아는') ? ['KO-ATTACH-001'] : [],
+    })));
+    const result = await rewrite(source, { provider, profile: 'web', maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(true);
+    expect(result.text).toBe('가지런한 치아를 만들기 위해 서두르지 않습니다. 기능입니다.');
+  });
+
   it('accepts conservative segment edits while reconstructing protected source locally', async () => {
     const provider = providerWith((segments) => segments.map((segment) => ({
       ...segment,
@@ -81,6 +374,14 @@ describe('guarded rewrite', () => {
     expect(segments.every((segment) => !segment.original.includes('private.example'))).toBe(true);
   });
 
+  it('keeps semantic anchors editable in the provider segment', () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const { request, segments } = buildRewriteRequest(source, {});
+
+    expect(request.prompt).toContain('않고');
+    expect(segments[0]?.original).toContain('않고');
+  });
+
   it('rejects newly invented numbers, negation, modality, or protected tokens', async () => {
     const provider = providerWith((segments) => segments.map((segment, index) => ({
       ...segment,
@@ -100,6 +401,32 @@ describe('guarded rewrite', () => {
 
     expect(result.accepted).toBe(false);
     expect(result.violations.join(' ')).toMatch(/수정 비율/u);
+  });
+
+  it('rejects duplicated content even when the character-change budget is fully open', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: `${segment.text} ${segment.text}`,
+    })));
+    const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+
+    expect(result.accepted).toBe(false);
+    expect(result.violations.join(' ')).toMatch(/내용어를 추가/u);
+  });
+
+  it('rejects fenced, prose-wrapped, and extra-field model output', async () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const rawProviders: RewriteProvider[] = [
+      { name: 'fenced', async complete() { return '```json\n{"segments":[]}\n```'; } },
+      { name: 'wrapped', async complete() { return '결과: {"segments":[]}'; } },
+      { name: 'extra', async complete() { return '{"segments":[],"note":"ok"}'; } },
+    ];
+    for (const provider of rawProviders) {
+      const result = await rewrite(source, { provider, maxChangedCharsRatio: 1 });
+      expect(result.accepted).toBe(false);
+      expect(result.violations.join(' ')).toMatch(/JSON|허용되지 않은/u);
+    }
   });
 
   it('calls the Anthropic Messages API with redirect and response guards', async () => {

@@ -74,7 +74,7 @@ try {
     [
       '--input-type=module',
       '--eval',
-      `import { analyze, ENGINE_VERSION } from 'munchekit'; if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || analyze('매우 빠르다.').diagnostics.length === 0) process.exit(1)`,
+      `import { analyze, ENGINE_VERSION } from 'munchekit'; const result = analyze('가지런한 치아는 서두르지 않고 만듭니다.', { profile: 'web' }); if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || !result.diagnostics.some((item) => item.ruleId === 'KO-ATTACH-001')) process.exit(1)`,
     ],
     consumerRoot,
   );
@@ -82,7 +82,7 @@ try {
     process.execPath,
     [
       '--eval',
-      `const { analyze, ENGINE_VERSION } = require('munchekit'); if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || typeof analyze !== 'function') process.exit(1)`,
+      `const { analyze, ENGINE_VERSION } = require('munchekit'); const result = analyze('가지런한 치아는 서두르지 않고 만듭니다.', { profile: 'web' }); if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || !result.diagnostics.some((item) => item.ruleId === 'KO-ATTACH-001')) process.exit(1)`,
     ],
     consumerRoot,
   );

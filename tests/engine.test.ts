@@ -8,6 +8,70 @@ function ids(text: string, options: Parameters<typeof analyze>[1] = {}): string[
 }
 
 describe('rule engine', () => {
+  it('flags a delayed purpose relation and offers the minimal user-intended repair', () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const report = analyze(source, { profile: 'web' });
+    const finding = report.diagnostics.find((item) => item.ruleId === 'KO-ATTACH-001');
+
+    expect(finding?.severity).toBe('warning');
+    expect(finding?.fixability).toBe('review');
+    expect(finding?.fix).toBeUndefined();
+    expect(source.slice(finding?.range.start, finding?.range.end)).toBe('치아는 서두르지 않고 만듭니다');
+    expect(finding?.suggestions.map((item) => item.replacement)).toEqual([
+      '치아를 만들기 위해 서두르지 않습니다',
+      '치아를 서두르지 않고 만듭니다',
+    ]);
+    const first = finding?.suggestions[0];
+    expect(first?.replacement).toBeDefined();
+    expect(
+      `${source.slice(0, finding?.range.start)}${first?.replacement}${source.slice(finding?.range.end)}`,
+    ).toBe('가지런한 치아를 만들기 위해 서두르지 않습니다.');
+  });
+
+  it('keeps legitimate subjects, passives, explicit objects, and unknown topic contrasts clean', () => {
+    const clean = [
+      '치과의사는 서두르지 않고 치료합니다.',
+      '장인은 서두르지 않고 제품을 만듭니다.',
+      '치아는 서두르지 않고 움직입니다.',
+      '가지런한 치아를 만들기 위해 서두르지 않습니다.',
+      '가지런한 치아를 서두르지 않고 만듭니다.',
+      '가지런한 치아는 하루아침에 만들어지지 않습니다.',
+      '좋은 제품은 서둘러 만들지 않습니다.',
+      '제품은 서두르지 않고 사용합니다.',
+      '도자기는 서두르지 않고 만듭니다.',
+      '미소는 서두르지 않고 만듭니다.',
+      '제품은 서두르지 않고 만듭니다. 포장은 빠르게 끝냅니다.',
+      '보고서는 서두르지 않고 작성해요. 이메일은 바로 보냅니다.',
+      '생성 AI 서비스는 서두르지 않고 만듭니다.',
+    ];
+    for (const source of clean) expect(ids(source)).not.toContain('KO-ATTACH-001');
+  });
+
+  it('generalizes the attachment rule across non-agentive dental outcomes and registers', () => {
+    const cases: Array<[string, string]> = [
+      ['바른 치열은 서두르지 않고 만듭니다.', '치열을 만들기 위해 서두르지 않습니다'],
+      ['가지런한 치아는 서두르지 않고 만들어요.', '치아를 만들기 위해 서두르지 않아요'],
+      ['안정적인 교합은 서두르지 않고 만든다.', '교합을 만들기 위해 서두르지 않는다'],
+    ];
+    for (const [source, replacement] of cases) {
+      const finding = analyze(source).diagnostics.find((item) => item.ruleId === 'KO-ATTACH-001');
+      expect(finding?.suggestions[0]?.replacement).toBe(replacement);
+    }
+  });
+
+  it('does not join an attachment finding across markup boundaries', () => {
+    expect(ids('<p>가지런한 치아는 서두르지 않고 만듭니다.</p>', { format: 'html' })).toContain('KO-ATTACH-001');
+    expect(ids('<p>가지런한 치아는 <em>서두르지 않고</em> 만듭니다.</p>', { format: 'html' })).not.toContain('KO-ATTACH-001');
+  });
+
+  it('does not build a broken full-sentence preview across structured markup', () => {
+    const source = '<p>가지런한 <strong>치아는 서두르지 않고 만듭니다.</strong></p>';
+    const finding = analyze(source, { format: 'html' }).diagnostics.find((item) => item.ruleId === 'KO-ATTACH-001');
+
+    expect(finding?.suggestions[0]?.message).toContain('치아를 만들기 위해 서두르지 않습니다');
+    expect(finding?.suggestions[0]?.message).not.toContain('<strong>');
+  });
+
   it('reports explainable findings for a typical product-copy sample', () => {
     const source = '새 검색 기능을 통해서 사용자는 원하는 문서에 대해서 더욱 빠르게 찾을 수 있습니다. 또한 다양한 검색 조건을 활용할 수 있습니다.';
     const report = analyze(source, { profile: 'web' });

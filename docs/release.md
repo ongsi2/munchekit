@@ -21,7 +21,7 @@ MuncheKit releases are created from an annotated `vX.Y.Z` tag after the same ver
   ```bash
   gh auth status
   gh repo create ongsi2/munchekit --public \
-    --description "Explainable Korean prose linter and safe rewriting toolkit — 어색한 한국어 문체를 진단하고 안전하게 다듬는 CLI/TypeScript library." \
+    --description "Explainable Korean prose linter and guarded copyediting toolkit — 어색한 한국어를 진단하고 최소 교정 후보를 제시하는 CLI/TypeScript library." \
     --disable-wiki
   git push -u origin main
   gh repo edit ongsi2/munchekit \
@@ -53,7 +53,7 @@ MuncheKit releases are created from an annotated `vX.Y.Z` tag after the same ver
   If the repository was created separately, skip only `gh repo create`; keep the push and settings commands. The API calls enable [private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately), Dependabot alerts, and automated security fixes.
 
 - [ ] Confirm that the README badges, rule documentation links, schema URLs, issue tracker, and `SECURITY.md` links all resolve from the public repository.
-- [ ] Set the repository description to `Explainable Korean prose linter and safe rewriting toolkit — 어색한 한국어 문체를 진단하고 안전하게 다듬는 CLI/TypeScript library.`
+- [ ] Set the repository description to `Explainable Korean prose linter and guarded copyediting toolkit — 어색한 한국어를 진단하고 최소 교정 후보를 제시하는 CLI/TypeScript library.`
 - [ ] Add GitHub topics: `korean`, `korean-nlp`, `korean-writing`, `prose-linter`, `copyediting`, `localization`, `i18n`, `typescript`, `korean-language`, `natural-language-processing`, `writing-tools`, `linter`, and `cli`.
 - [ ] Upload `assets/social-preview.png` in the repository Social preview settings; committing the image alone does not set the GitHub card.
 - [ ] Enable private vulnerability reporting under the repository security settings.
@@ -81,7 +81,7 @@ The workflow runs only for a pushed `v*` tag. Without `NPM_TOKEN`, it performs v
 
 - [ ] Inspect the packed file list. It must include `dist`, both schemas, both READMEs, `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`, and `LICENSE`.
 - [ ] Confirm that no `.env`, API key, private fixture, coverage output, or unpublished corpus is included.
-- [ ] Confirm the v0.1.0 config and report schemas resolve at their tag-pinned URLs after the tag is pushed.
+- [ ] Confirm the v0.2.0 config and report schemas resolve at their tag-pinned URLs after the tag is pushed.
 
 ## 4. Tag and publish
 
@@ -89,24 +89,24 @@ The workflow runs only for a pushed `v*` tag. Without `NPM_TOKEN`, it performs v
 - [ ] Create and push the annotated tag.
 
   ```bash
-  git tag -a v0.1.0 -m "MuncheKit v0.1.0"
+  git tag -a v0.2.0 -m "MuncheKit v0.2.0"
   git push origin main
-  git push origin v0.1.0
+  git push origin v0.2.0
   ```
 
-- [ ] Watch the `Release` workflow. It must pass version verification, tests, build, and npm publication.
-- [ ] Create a GitHub Release from `v0.1.0` and use the matching changelog section as the release notes.
+- [ ] Watch the `Release` workflow. Version verification, tests, and build must pass; npm publication must pass when `NPM_TOKEN` is configured, otherwise confirm the explicit skip message.
+- [ ] Create a GitHub Release from `v0.2.0` and use the matching changelog section as the release notes.
 
 ## 5. Verify the public artifacts
 
 - [ ] Check the registry metadata and provenance.
 
   ```bash
-  npm view munchekit@0.1.0 name version engines repository dist
-  npx --yes munchekit@0.1.0 --version
+  npm view munchekit@0.2.0 name version engines repository dist
+  npx --yes munchekit@0.2.0 --version
   ```
 
-- [ ] Install `munchekit@0.1.0` in an empty ESM project and an empty CommonJS project.
+- [ ] Install `munchekit@0.2.0` in an empty ESM project and an empty CommonJS project.
 - [ ] Run both `munchekit --version` and `munche --version` from the installed package.
 - [ ] Open every README link from both GitHub and npm, including the config schema and JSON report schema.
 - [ ] Verify the GitHub social card and npm search terms after indexing completes.

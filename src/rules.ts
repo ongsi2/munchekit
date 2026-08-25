@@ -141,7 +141,11 @@ const calqueThrough = regexRule(
     message: '수단을 나타내는 말이 아니라면 ‘~으로’ 또는 직접적인 동사를 검토하세요.',
     rationale: '추상 명사 뒤의 ‘통해서’는 번역투와 불필요한 우회 표현이 되기 쉽습니다.',
     confidence: 0.76,
-    suggestions: review('예: “검색 기능을 통해 찾는다” → “검색 기능으로 찾는다”'),
+    suggestions: (match) => {
+      const noun = match[1] ?? '';
+      const replacement = `${noun}${instrumentParticle(noun)}`;
+      return [{ replacement, message: `이 범위를 “${replacement}”로 줄일 수 있습니다.`, risk: 'medium' }];
+    },
     skip: (match) => physicalThroughNouns.has(match[1] ?? ''),
   },
 );
@@ -409,6 +413,95 @@ const aiCliches = regexRule(
     suggestions: review('누가 무엇을 어떻게 하는지 구체적인 문장으로 바꾸세요.'),
   },
 );
+
+interface CreationForm {
+  lemma: string;
+  purpose: string;
+  negativeEnding: string;
+}
+
+const creationForms = new Map<string, CreationForm>([
+  ['만듭니다', { lemma: '만들다', purpose: '만들기', negativeEnding: '않습니다' }],
+  ['만들어요', { lemma: '만들다', purpose: '만들기', negativeEnding: '않아요' }],
+  ['만든다', { lemma: '만들다', purpose: '만들기', negativeEnding: '않는다' }],
+]);
+
+const creationResults = new Map<string, ReadonlySet<string>>([
+  ['만들다', new Set(['치아', '치열', '교합'])],
+]);
+
+const creationResultHeads = [...new Set([...creationResults.values()].flatMap((values) => [...values]))]
+  .sort((left, right) => right.length - left.length)
+  .join('|');
+const creationFiniteForms = [...creationForms.keys()]
+  .sort((left, right) => right.length - left.length)
+  .join('|');
+const attachmentExpression = new RegExp(
+  `(?<![\\p{L}\\p{N}_])(${creationResultHeads})(은|는)\\s+서두르지\\s+않(고|으며)\\s+(${creationFiniteForms})(?=$|[.!?…])`,
+  'gu',
+);
+
+function objectParticle(noun: string): '을' | '를' {
+  const last = noun.at(-1);
+  if (!last) return '를';
+  const code = last.charCodeAt(0) - 0xac00;
+  return code >= 0 && code <= 11171 && code % 28 !== 0 ? '을' : '를';
+}
+
+function instrumentParticle(noun: string): '으로' | '로' {
+  const last = noun.at(-1);
+  if (!last) return '으로';
+  const code = last.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return '으로';
+  const finalIndex = code % 28;
+  return finalIndex === 0 || finalIndex === 8 ? '로' : '으로';
+}
+
+const attachmentPurposeRule: Rule = {
+  meta: meta(
+    'KO-ATTACH-001',
+    '결과물 주제화로 흐린 목적 관계',
+    'clarity',
+    '결과물을 주제로 먼저 세워 목적과 행위의 관계가 늦게 드러나는 문장을 찾습니다.',
+    'info',
+    'review',
+  ),
+  check(context) {
+    const findings: FindingDraft[] = [];
+    for (const match of regexMatchesInProse(context, attachmentExpression)) {
+      if (match.index === undefined) continue;
+      const head = match[1];
+      const connector = match[3];
+      const finite = match[4];
+      if (!head || !connector || !finite) continue;
+      const form = creationForms.get(finite);
+      if (!form || !creationResults.get(form.lemma)?.has(head)) continue;
+      const object = `${head}${objectParticle(head)}`;
+      const range = { start: match.index, end: match.index + match[0].length };
+      const purposeReplacement = `${object} ${form.purpose} 위해 서두르지 ${form.negativeEnding}`;
+      const mannerReplacement = `${object} 서두르지 않${connector} ${finite}`;
+      findings.push({
+        range,
+        message: '결과물을 ‘은/는’으로 세운 뒤 만드는 방식을 이어 써, 목적과 행위의 관계가 늦게 드러납니다.',
+        rationale: '문법 오류는 아니지만, 서두르지 않는 일이 목적을 위한 선택인지 단순한 방식인지 문장 끝에서야 알 수 있습니다.',
+        confidence: 0.82,
+        suggestions: [
+          {
+            replacement: purposeReplacement,
+            message: `목적 관계라면 이 범위를 “${purposeReplacement}”로 바꿔 관계를 밝히세요.`,
+            risk: 'medium',
+          },
+          {
+            replacement: mannerReplacement,
+            message: `단순한 방식 관계라면 이 범위를 “${mannerReplacement}”로 바꿔 목적어 조사만 밝히세요.`,
+            risk: 'medium',
+          },
+        ],
+      });
+    }
+    return findings;
+  },
+};
 
 function sentenceLengthRule(): Rule {
   return {
@@ -849,6 +942,7 @@ export const rules: Rule[] = [
   calqueAbout,
   calqueThrough,
   calqueBased,
+  attachmentPurposeRule,
   nominalizationRule,
   redundantPairRule,
   approximateDoubleRule,

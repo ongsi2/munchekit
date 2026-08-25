@@ -1,8 +1,8 @@
 # MuncheKit · 문체킷
 
-> 웹·앱·문서의 어색한 한국어를 찾아 이유와 수정안을 보여주고, 원뜻을 지키며 다듬습니다.
+> 웹·앱·문서의 어색한 한국어를 찾아 이유와 최소 교정 후보를 보여줍니다.
 
-[English](./README.en.md) · [규칙 목록](./docs/rules.md) · [설계 원칙](./docs/architecture.md) · [Claude 교차 검토](./docs/reviews/claude-2026-08-25.md) · [기여하기](./CONTRIBUTING.md)
+[English](./README.en.md) · [규칙 목록](./docs/rules.md) · [설계 원칙](./docs/architecture.md) · [최소 교정 교차 검토](./docs/reviews/claude-minimal-copyedit-2026-08-25.md) · [기여하기](./CONTRIBUTING.md)
 
 [![CI](https://github.com/ongsi2/munchekit/actions/workflows/ci.yml/badge.svg)](https://github.com/ongsi2/munchekit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f6f5e.svg)](./LICENSE)
@@ -24,44 +24,53 @@ MuncheKit은 **한국어 문체 린터·윤문 툴킷**이다. 맞춤법만 찾�
 원문:
 
 ```text
-새 검색 기능을 통해서 사용자는 원하는 문서에 대해서 매우 빠르게 찾을 수 있습니다.
-또한 다양한 검색 조건을 활용할 수 있습니다.
+가지런한 치아는 서두르지 않고 만듭니다.
 ```
 
 ```console
-$ npx --yes github:ongsi2/munchekit#v0.1.0 lint copy.txt --profile web
-copy.txt:1:6  info  수단을 나타내는 말이 아니라면 ‘~으로’ 또는 직접적인 동사를 검토하세요.  KO-CALQUE-002
-  새 검색 기능을 통해서 사용자는 원하는 문서에 대해서 매우 빠르게 찾을 수 있습니다.
-  ↳ 근거 (76%): 추상 명사 뒤의 ‘통해서’는 번역투와 불필요한 우회 표현이 되기 쉽습니다.
-  ↳ 제안: 예: “검색 기능을 통해 찾는다” → “검색 기능으로 찾는다”
+$ npx --yes github:ongsi2/munchekit#v0.2.0 lint copy.txt --profile web
+copy.txt:1:6  warning  결과물을 ‘은/는’으로 세운 뒤 만드는 방식을 이어 써, 목적과 행위의 관계가 늦게 드러납니다.  KO-ATTACH-001
+  ↳ 제안 1: 목적 관계라면 이 범위를 “치아를 만들기 위해 서두르지 않습니다”로 바꿔 관계를 밝히세요.
+  ↳ 범위 교체 1: 치아를 만들기 위해 서두르지 않습니다
+  ↳ 제안 2: 단순한 방식 관계라면 이 범위를 “치아를 서두르지 않고 만듭니다”로 바꿔 목적어 조사만 밝히세요.
+  ↳ 범위 교체 2: 치아를 서두르지 않고 만듭니다
 ```
 
-기본 출력은 같은 원문에서 `KO-CALQUE-001`, `KO-VAGUE-001`, `KO-POSS-001` 2건, `KO-VAGUE-002`까지 총 6건을 같은 형식으로 보여준다. 좌표는 각각 `1:23`, `1:31`, `1:38`, `2:4`, `2:15`이며 요약은 `0 error · 2 warning · 4 info · 0 safe fix`다.
+첫 후보를 finding 범위에 적용하면 다음 문장이 된다.
 
-사람이 검토하거나 선택형 Claude 윤문을 거친 후보:
+```diff
+- 가지런한 치아는 서두르지 않고 만듭니다.
++ 가지런한 치아를 만들기 위해 서두르지 않습니다.
+```
+
+단순히 만드는 방식을 말하려는 문맥이라면 둘째 후보인 `가지런한 치아를 서두르지 않고 만듭니다.`가 더 정확할 수 있다. 목적 관계를 택할지는 해석이 필요하므로 둘 다 자동수정하지 않는다.
+
+`서두르지 않기에 보다 가지런한 치아가 완성됩니다.`도 카피로는 가능하지만, 원문보다 강한 인과·비교·피동을 추가한다. 기본 윤문이 스스로 골라 내보내는 후보가 아니라 사람이 그 의도를 확인한 뒤 쓰는 대안이다. 마찬가지로 `건강한`, `안전한`, `정밀한 진단`, `오래 유지되는`처럼 원문에 없던 주장은 기본 재작성에서 거부한다.
+
+번역투·겹말·리듬 같은 기존 규칙도 같은 형식으로 진단한다. 예를 들어 다음 문장에는 `KO-CALQUE-001/002`, `KO-VAGUE-001/002`, `KO-POSS-001`이 각각 적용될 수 있다.
 
 ```text
-새 검색 기능으로 원하는 문서를 더 빨리 찾고, 여러 검색 조건도 쓸 수 있습니다.
+새 검색 기능을 통해서 사용자는 원하는 문서에 대해서 매우 빠르게 찾을 수 있습니다.
 ```
 
-`lint`는 원문을 바꾸지 않는다. `fix`도 의미와 말투가 달라질 수 있는 항목은 손대지 않는다. 위처럼 문장 구조가 달라지는 수정은 항상 검토 대상으로 남는다.
+`lint`는 원문을 바꾸지 않는다. `fix`도 의미와 말투가 달라질 수 있는 항목은 손대지 않는다.
 
 ## 설치와 실행
 
 Node.js 20.19.0 이상이 필요하다.
 
-현재 npm 패키지는 아직 게시 전이다. 대신 공개 GitHub v0.1.0 소스 릴리스를 바로 실행하거나 프로젝트에 고정할 수 있다.
+현재 npm 패키지는 아직 게시 전이다. 대신 공개 GitHub v0.2.0 소스 릴리스를 바로 실행하거나 프로젝트에 고정할 수 있다.
 
 ```bash
 # 공개 GitHub 소스를 설치 없이 한 번 실행
-npx --yes github:ongsi2/munchekit#v0.1.0 check messages/ko.json --profile web
+npx --yes github:ongsi2/munchekit#v0.2.0 check messages/ko.json --profile web
 
 # 프로젝트에 고정
-npm install --save-dev github:ongsi2/munchekit#v0.1.0
+npm install --save-dev github:ongsi2/munchekit#v0.2.0
 npx munche init
 ```
 
-npm에 `munchekit` v0.1.0이 게시된 뒤에는 위 두 패키지 지정 부분을 각각 `munchekit`으로 줄일 수 있다.
+npm에 `munchekit` v0.2.0이 게시된 뒤에는 위 두 패키지 지정 부분을 각각 `munchekit`으로 줄일 수 있다.
 
 주요 명령:
 
@@ -81,6 +90,7 @@ munche explain KO-NOM-001                     # 규칙 설명
 
 | 범주 | 찾는 예 | 기본 처리 |
 |---|---|---|
+| 역할·절 관계 | `치아는 서두르지 않고 만듭니다`처럼 늦게 드러나는 목적 관계 | 정확한 두 후보, 사람 검토 |
 | 번역투 | `~에 대해서`, 추상적인 `~을 통해서`, 반복되는 `기반` | 검토 제안 |
 | 명사화·겹말 | `검토를 진행했다`, `사전에 미리`, `약 10개 정도` | 문맥을 확인하는 review |
 | 피동·가능 표현 | `되어지다`, 기능 나열형 `~할 수 있다` | safe 또는 검토 |
@@ -112,7 +122,7 @@ JSON 값과 일반 JavaScript/TypeScript 문자열은 화면 문구일 수도 �
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/ongsi2/munchekit/v0.1.0/schema/munche.schema.json",
+  "$schema": "https://raw.githubusercontent.com/ongsi2/munchekit/v0.2.0/schema/munche.schema.json",
   "profile": "web",
   "files": ["content/**/*.{md,mdx}", "messages/ko.json", "src/**/*.{jsx,tsx}"],
   "ignore": ["**/*.test.*", "**/__snapshots__/**"],
@@ -168,27 +178,34 @@ console.log(fixed.text);
 
 ## 선택형 Claude 윤문
 
-로컬 규칙만으로 문장 구조 전체를 자연스럽게 다시 쓰기는 어렵다. `rewrite`는 이 단계만 Claude Messages API에 위임한다.
+로컬 규칙만으로 조사·절 관계가 얽힌 문장을 모두 교정하기는 어렵다. `rewrite`는 원문 내용어와 그 상대 순서를 유지하는 최소 교정 단계만 Claude Messages API에 위임한다. 어순 변경은 `KO-ATTACH-001`처럼 정확한 로컬 범위 교체 후보가 있을 때만 허용하며, 카피를 새로 창작하는 모드가 아니다.
 
 ```bash
 ANTHROPIC_API_KEY=... \
-  npx --yes github:ongsi2/munchekit#v0.1.0 rewrite post.md --model <사용할-Claude-모델-ID>
+  npx --yes github:ongsi2/munchekit#v0.2.0 rewrite post.md --model <사용할-Claude-모델-ID>
 ```
 
 모델 ID는 빠르게 바뀌므로 기본값을 코드에 박지 않는다. 출력은 기본적으로 화면에만 보이며 `--write`를 줘야 파일에 쓴다.
 
 기본 endpoint는 `https://api.anthropic.com`이다. Anthropic 호환 서비스가 필요하면 `--base-url <HTTPS URL>`을 쓸 수 있지만 API key와 segment가 그 주소로 전송되므로 직접 신뢰하는 endpoint만 지정해야 한다.
 
-재작성은 모델이 문서 전체를 돌려주는 방식이 아니다. 파서가 다듬어도 되는 한국어 span만 독립 segment로 보내고, 코드·태그·URL·수치·인용문·보존 용어가 있던 자리는 로컬 원본에 그대로 둔다. 응답의 segment만 원래 범위에 다시 끼운 뒤 다음 조건을 검사한다.
+재작성은 모델이 문서 전체를 돌려주는 방식이 아니다. 파서가 다듬어도 되는 한국어 span과 그 범위에 걸린 진단·수정 후보만 보낸다. 코드·태그·URL·수치·인용문·보존 용어가 있던 자리는 로컬 원본에 그대로 둔다. 부정·양태 표현은 활용을 고칠 수 있도록 segment에 남기되 로컬에서 의미 어간을 비교한다. 응답의 segment만 원래 범위에 다시 끼운 뒤 다음 조건을 검사한다.
 
 - segment의 개수·ID·순서가 같은가
-- 수치, 부정, 가능·의무·추측, URL, 코드, 보존 용어의 multiset이 같은가
+- 응답이 설명·코드 펜스·미지 필드가 없는 엄격한 JSON인가
+- 수치, URL, 코드, 보존 용어의 정확한 multiset이 같은가
+- 부정·양태의 의미 어간과 이웃 서술어가 같은가, 접속 관계 변화가 정확한 로컬 후보로 허용됐는가
+- 시제와 주어·목적어 등의 조사 역할이 보존됐는가
+- 마침표·물음표·느낌표가 나타내는 진술·질문·강조의 성격이 보존됐는가
+- 원문이나 해당 진단의 후보에 없던 내용어를 추가하지 않았나
+- 진단 범위 밖의 내용어를 삭제하지 않았나
+- 정확한 로컬 후보가 없는 수정에서 내용어의 상대 순서를 바꾸지 않았나
 - 후보가 원래 JSON/HTML/TSX/Markdown 구조로 다시 파싱되고 구조 signature가 같은가
 - 문서 전체와 각 segment의 변경 비율이 설정 한도를 넘지 않았나
 
-하나라도 어기면 후보를 폐기하고 원문을 돌려준다. 통과해도 의미 보존을 증명한 것은 아니므로 Claude 결과는 언제나 **review**다. API 요청 형식은 [Anthropic Messages API 문서](https://docs.anthropic.com/en/api/messages)를 따른다.
+`--max-change 1`을 줘도 내용어·리터럴·부정·시제·조사 역할 가드는 꺼지지 않는다. 하나라도 어기면 후보를 폐기하고 원문을 돌려준다. 통과해도 의미 보존을 증명한 것은 아니므로 Claude 결과는 언제나 **review**다. API 요청 형식은 [Anthropic Messages API 문서](https://docs.anthropic.com/en/api/messages)를 따른다.
 
-릴리스 후보에 사용한 읽기 전용 Claude Code 점검 방법, 재현한 지적, 수용·기각 근거는 [교차 검토 기록](./docs/reviews/claude-2026-08-25.md)에 남겼다. 다른 모델의 동의만으로 규칙을 `safe`로 올리지는 않는다.
+이 실패 사례에 사용한 읽기 전용 Claude Code 점검 방법, 재현한 지적, 수용·수정 근거는 [최소 교정 교차 검토 기록](./docs/reviews/claude-minimal-copyedit-2026-08-25.md)에 남겼다. 다른 모델의 동의만으로 규칙을 `safe`로 올리지는 않는다.
 
 ## 맞춤법 검사기나 humanizer와 무엇이 다른가
 
@@ -220,7 +237,7 @@ MuncheKit은 저자가 사람인지 AI인지 판별하지 않으며 탐지기 �
 - [x] Plain/Markdown/MDX/JSON/HTML/JSX/TSX 추출
 - [x] pretty/JSON/SARIF, CLI와 TypeScript API
 - [x] safe fix, 억제 지시문, 겹침·수정량 방어
-- [x] 선택형 Claude provider와 의미 보존 guard
+- [x] 선택형 Claude provider와 리터럴·부정·내용어·변경량 guard
 - [ ] 저자·장르를 분리한 500개 이상 clean benchmark
 - [ ] YAML과 ICU MessageFormat 전용 추출기
 - [ ] optional Kiwi 형태 분석 adapter

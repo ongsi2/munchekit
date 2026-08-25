@@ -160,7 +160,7 @@ export async function loadConfig(cwd = process.cwd(), explicitPath?: string): Pr
 }
 
 export const exampleConfig = {
-  $schema: 'https://raw.githubusercontent.com/ongsi2/munchekit/v0.1.0/schema/munche.schema.json',
+  $schema: 'https://raw.githubusercontent.com/ongsi2/munchekit/v0.2.0/schema/munche.schema.json',
   profile: 'web',
   files: ['content/**/*.{md,mdx}', 'messages/ko.json', 'src/**/*.{jsx,tsx}'],
   ignore: ['**/*.test.*', '**/__snapshots__/**'],

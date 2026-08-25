@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/ongsi2/munchekit/v0.1.0/schema/munche-report.schema.json",
+  "$id": "https://raw.githubusercontent.com/ongsi2/munchekit/v0.2.0/schema/munche-report.schema.json",
   "title": "MuncheKit JSON report",
-  "description": "Machine-readable output produced by `munche lint|check --output json` in MuncheKit 0.1.x.",
+  "description": "Machine-readable output produced by `munche lint|check --output json` in MuncheKit 0.2.x.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "offsetEncoding", "reports", "summary"],

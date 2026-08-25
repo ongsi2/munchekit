@@ -4,6 +4,18 @@ import { analyze } from '../src/engine.js';
 import { applyFixes, applyTextEdits, changedCharsRatio } from '../src/fixes.js';
 
 describe('safe fixes', () => {
+  it('never auto-applies an interpretation-dependent purpose suggestion', () => {
+    const source = '가지런한 치아는 서두르지 않고 만듭니다.';
+    const report = analyze(source, { profile: 'web' });
+    const finding = report.diagnostics.find((item) => item.ruleId === 'KO-ATTACH-001');
+    const result = applyFixes(source, report);
+
+    expect(finding?.fixability).toBe('review');
+    expect(finding?.fix).toBeUndefined();
+    expect(result.text).toBe(source);
+    expect(result.applied).toHaveLength(0);
+  });
+
   it('applies only high-confidence fixes', () => {
     const source = '사전에 미리 검토를 진행했고, 약 10개 정도가 되어지는지 확인했다!!';
     const report = analyze(source);

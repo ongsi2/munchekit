@@ -23,8 +23,9 @@ const fixtures = readFileSync(fixturePath, 'utf8')
 
 describe('public minimal-pair evaluation fixtures', () => {
   it('contains a positive and hard negative for every initial rule', () => {
-    expect(fixtures).toHaveLength(50);
-    for (const rule of ruleCatalog.filter((item) => item.category !== 'parser')) {
+    const languageRules = ruleCatalog.filter((item) => item.category !== 'parser');
+    expect(fixtures).toHaveLength(languageRules.length * 2);
+    for (const rule of languageRules) {
       expect(fixtures.some((fixture) => fixture.expect.includes(rule.id)), `${rule.id} positive`).toBe(true);
       expect(fixtures.some((fixture) => fixture.reject.includes(rule.id)), `${rule.id} hard negative`).toBe(true);
     }

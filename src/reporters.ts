@@ -27,12 +27,17 @@ export function prettyReport(report: AnalysisReport, options: { color?: boolean 
     const id = color ? pc.dim(diagnostic.ruleId) : diagnostic.ruleId;
     const fix = diagnostic.fix?.safety === 'safe' ? (color ? pc.green(' [safe fix]') : ' [safe fix]') : '';
     const rationale = `  ↳ 근거 (${String(Math.round(diagnostic.confidence * 100))}%): ${terminalText(diagnostic.rationale)}`;
-    const suggestion = diagnostic.suggestions[0]?.message;
+    const suggestionLines = diagnostic.suggestions.flatMap((suggestion, index) => {
+      const suffix = diagnostic.suggestions.length > 1 ? ` ${String(index + 1)}` : '';
+      const lines = [`  ↳ 제안${suffix}: ${terminalText(suggestion.message)}`];
+      if (suggestion.replacement) lines.push(`  ↳ 범위 교체${suffix}: ${terminalText(suggestion.replacement)}`);
+      return lines.map((line) => (color ? pc.dim(line) : line));
+    });
     return [
       `${where}  ${severityLabel(diagnostic.severity, color)}  ${terminalText(diagnostic.message)}  ${id}${fix}`,
       `  ${color ? pc.dim(terminalText(diagnostic.excerpt)) : terminalText(diagnostic.excerpt)}`,
       color ? pc.dim(rationale) : rationale,
-      ...(suggestion ? [color ? pc.dim(`  ↳ 제안: ${terminalText(suggestion)}`) : `  ↳ 제안: ${terminalText(suggestion)}`] : []),
+      ...suggestionLines,
     ];
   });
   lines.push(

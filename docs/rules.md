@@ -4,6 +4,7 @@ Language-rule levels are configurable. `KO-PARSE-001` is a fixed engine error an
 
 | ID | Category | Default | Fix | What it checks |
 |---|---|---:|---:|---|
+| KO-ATTACH-001 | clarity | info | review | a result topic that delays the purpose relation |
 | KO-CALQUE-001 | translationese | info | review | `~에 대해서/대한` |
 | KO-CALQUE-002 | translationese | info | review | abstract `~을 통해서` |
 | KO-CALQUE-003 | translationese | info | review | generic `기반` clauses |
@@ -30,6 +31,15 @@ Language-rule levels are configurable. `KO-PARSE-001` is a fixed engine error an
 | KO-PLURAL-001 | conciseness | info | review | plural suffix after plural quantifier |
 | KO-SPACE-001 | mechanics | warning | safe | high-confidence `수 있다/없다` spacing |
 | KO-PARSE-001 | parser | error | none | structured-source parse failures |
+
+## KO-ATTACH-001
+
+- Flags: `가지런한 치아는 서두르지 않고 만듭니다.`
+- First review candidate: `가지런한 치아를 만들기 위해 서두르지 않습니다.`
+- Alternative when the original manner relation is intentional: `가지런한 치아를 서두르지 않고 만듭니다.`
+- Does not flag: explicit objects, passive constructions, or nouns outside the initial dental-outcome allowlist (`치아`, `치열`, `교합` with `만들다`). A legitimate contrastive topic inside that allowlist can still be reported, which is why the rule stays review-only.
+- Why review-only: `은/는` can mark a legitimate contrastive topic. Changing `서두르지 않고` into a purpose clause makes an interpretation explicit, so a person must confirm that intent.
+- The rule deliberately starts with a small set of known result–creation pairs. Add a hard negative whenever that set is expanded.
 
 ## KO-CALQUE-001
 

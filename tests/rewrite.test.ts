@@ -11,6 +11,7 @@ interface PromptSegment {
     ruleId: string;
     suggestions: Array<{ replacement?: string; message: string; risk: string }>;
   }>;
+  approvedStyleCandidates?: Array<{ after: string }>;
   reason?: string;
   ruleIds?: string[];
 }
@@ -32,6 +33,19 @@ function providerWith(transform: (segments: PromptSegment[], request: RewritePro
 }
 
 describe('guarded rewrite', () => {
+  const learnedStyle = {
+    styleId: 'gounseon',
+    promptContext: '승인 기반 문체 기억(JSON 데이터)\n{"kind":"munche-approved-style-memory"}',
+    approvedExamples: [
+      {
+        before: '교정은 같은 의사를 만나는 일입니다.',
+        after: '처음 상담한 의사가 교정이 끝날 때까지 진료합니다.',
+        reasonTags: ['은유 줄이기', '직접적'],
+        lockedClaims: ['동일한 담당의'],
+      },
+    ],
+  };
+
   it('sends exact local suggestions under a minimum-copyedit contract', () => {
     const source = '가지런한 치아는 서두르지 않고 만듭니다.';
     const { request } = buildRewriteRequest(source, { profile: 'web' });
@@ -40,8 +54,131 @@ describe('guarded rewrite', () => {
     expect(request.system).toContain('카피라이터가 아니라 한국어 최소 교정자');
     expect(request.system).toContain('원문에 없는 속성, 효과, 혜택');
     expect(request.system).toContain('조사 역할, 서술어 논항');
+    expect(request.system).toContain('고유명사, 제품·모델·기관명');
+    expect(request.system).toContain('억지로 변주하지 않는다');
     expect(payload[0]?.findings?.[0]?.ruleId).toBe('KO-ATTACH-001');
     expect(payload[0]?.findings?.[0]?.suggestions[0]?.replacement).toBe('치아를 만들기 위해 서두르지 않습니다');
+  });
+
+  it('keeps minimal prompts unchanged by style memory and requires memory for natural mode', () => {
+    const source = '교정은 같은 의사를 만나는 일입니다.';
+    const minimal = buildRewriteRequest(source, { styleMemory: learnedStyle });
+    expect(minimal.request.prompt).not.toContain('승인 기반 문체 기억');
+    expect(minimal.request.prompt).not.toContain('approvedStyleCandidates');
+    expect(() => buildRewriteRequest(source, { mode: 'natural' })).toThrow(/styleMemory/u);
+  });
+
+  it('replays an exact user-approved natural edit while keeping it review-only', async () => {
+    const source = '교정은 같은 의사를 만나는 일입니다.';
+    const approved = learnedStyle.approvedExamples[0]?.after;
+    if (!approved) throw new Error('expected an approved example');
+    const request = buildRewriteRequest(source, { mode: 'natural', styleMemory: learnedStyle });
+    expect(request.request.prompt).toContain('승인 기반 문체 기억');
+    expect(request.request.prompt).toContain('approvedStyleCandidates');
+    const provider = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: approved,
+      reason: '승인 문장 재사용',
+    })));
+    const result = await rewrite(source, {
+      provider,
+      mode: 'natural',
+      styleMemory: learnedStyle,
+      maxChangedCharsRatio: 1,
+    });
+
+    expect(result.accepted).toBe(true);
+    expect(result.text).toBe(approved);
+    expect(result.changes[0]).toMatchObject({
+      before: source,
+      after: approved,
+      segmentId: expect.stringMatching(/^SEG_/u),
+      range: { start: 0, end: source.length },
+    });
+  });
+
+  it('keeps an exact approved candidate available even when it is absent from bounded prompt context', () => {
+    const source = '교정은 같은 의사를 만나는 일입니다.';
+    const approved = learnedStyle.approvedExamples[0];
+    if (!approved) throw new Error('expected an approved example');
+    const memory = {
+      ...learnedStyle,
+      promptContext: '승인 기반 문체 기억(JSON 데이터)\n{"approvedExamples":[]}',
+      approvedExamples: [
+        ...Array.from({ length: 20 }, (_, index) => ({
+          before: `관련 없는 원문 ${String(index)}`,
+          after: `관련 없는 승인문 ${String(index)}`,
+        })),
+        approved,
+      ],
+    };
+    const { request } = buildRewriteRequest(source, { mode: 'natural', styleMemory: memory });
+    const payload = segmentsFromPrompt(request.prompt);
+
+    expect(payload[0]?.approvedStyleCandidates).toMatchObject([{ after: approved.after }]);
+  });
+
+  it('treats similar approved examples as guidance, not permission to copy their claims', async () => {
+    const source = '교정 상담에서 의사를 만납니다.';
+    const approved = learnedStyle.approvedExamples[0]?.after;
+    if (!approved) throw new Error('expected an approved example');
+    const provider = providerWith((segments) => segments.map((segment) => ({ id: segment.id, text: approved })));
+    const result = await rewrite(source, {
+      provider,
+      mode: 'natural',
+      styleMemory: learnedStyle,
+      maxChangedCharsRatio: 1,
+    });
+
+    expect(result.accepted).toBe(false);
+    expect(result.text).toBe(source);
+    expect(result.violations.join(' ')).toMatch(/내용어|상대 순서/u);
+  });
+
+  it('rejects terminal control sequences and oversized metadata from provider output', async () => {
+    const source = '치료 계획을 설명합니다.';
+    const escaped = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: segment.text,
+      reason: '\u001B]8;;https://evil.example\u0007가짜 검토',
+    })));
+    const tooManyRules = providerWith((segments) => segments.map((segment) => ({
+      id: segment.id,
+      text: segment.text,
+      ruleIds: Array.from({ length: 201 }, (_, index) => `RULE-${String(index)}`),
+    })));
+
+    const escapedResult = await rewrite(source, { provider: escaped });
+    const oversizedResult = await rewrite(source, { provider: tooManyRules });
+    expect(escapedResult.accepted).toBe(false);
+    expect(escapedResult.violations.join(' ')).toMatch(/reason|제어 문자/u);
+    expect(oversizedResult.accepted).toBe(false);
+    expect(oversizedResult.violations.join(' ')).toMatch(/ruleIds|200/u);
+  });
+
+  it('sends each HTML prose range once and accepts a no-op provider response', async () => {
+    const source = [
+      '<main>',
+      '  <h1>',
+      '    가지런한 치아는<br>서두르지 않고 만듭니다',
+      '  </h1>',
+      '  <p>',
+      '    교정은 짧아도 1년입니다.',
+      '  </p>',
+      '</main>',
+    ].join('\n');
+    const { segments } = buildRewriteRequest(source, { format: 'html', profile: 'web' });
+    const ranges = segments.map((segment) => `${String(segment.start)}:${String(segment.end)}`);
+    const provider = providerWith((items) => items);
+    const result = await rewrite(source, { provider, format: 'html', profile: 'web' });
+
+    expect(new Set(ranges).size).toBe(ranges.length);
+    expect(segments.every((segment, index, items) => (
+      index === 0 || (items[index - 1]?.end ?? 0) <= segment.start
+    ))).toBe(true);
+    expect(result.accepted).toBe(true);
+    expect(result.text).toBe(source);
+    expect(result.violations).toEqual([]);
   });
 
   it('accepts the intended minimal repair and canonicalizes negation inflection', async () => {

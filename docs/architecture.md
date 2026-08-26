@@ -1,6 +1,6 @@
 # Architecture
 
-MuncheKit separates four concerns that are often collapsed into one prompt.
+MuncheKit separates concerns that are often collapsed into one prompt.
 
 ```text
 source file
@@ -10,6 +10,13 @@ source file
   → safe TextEdit[] or review-only suggestions
   → optional provider rewrite
   → invariant verification
+```
+
+Human-approved style memory forms a separate feedback path rather than changing the deterministic rule engine.
+
+```text
+rule findings → review decision → .munche/feedback.jsonl → learn summary
+                               ↘ relevant approved examples → natural rewrite proposal → human review
 ```
 
 ## 1. Extraction before language rules
@@ -72,7 +79,17 @@ Provider output must be one strict JSON object with the original segment IDs and
 
 This guard is a damage limiter, not a proof of semantic equivalence. All provider output remains review-only.
 
-## 5. Suppression and configuration
+## 5. Approval-backed style memory
+
+`review` stores accepted, human-edited, rejected, and kept decisions as append-only JSONL records. `--style-profile` is a user-defined project or brand namespace for those records; it is independent from `--profile`, which selects deterministic lint rules and severities. Direct `--before`/`--after` input can seed an already approved pair, while file review binds decisions to a source hash and exact diagnostic range. Non-interactive decisions must name every review item and match both the current source hash and a session hash covering the engine, profile, findings, and proposal contents before edits or feedback are accepted.
+
+`learn` is a read-only view of the retrieval memory, not a training job or a prerequisite for rewrite. It creates no model weights. Only accepted and human-edited pairs become positive examples; rejected proposals are not exposed as style examples, though bounded rejection-reason tags may warn the provider. Identical normalized inputs with conflicting approved outputs are withheld from retrieval.
+
+`rewrite --mode natural` retrieves a bounded set of examples for the current input. An exact match to an approved `before` can authorize only that specific `after`, including the sentence-level content order or tense changes the person already approved. A merely similar example is style guidance and cannot authorize copying source-absent claims; the ordinary semantic guards still apply to it. Reconstruction, protected-literal, source-structure, and change-budget guards apply in both cases. Natural mode rejects direct `--write`; `--result-file` or `--output json` creates a source-bound artifact that `review --rewrite-result` turns into ordinary approval items. Only the accepted or human-edited ranges can then be written and learned. Default minimal mode does not consume style memory. Library callers that construct `RewriteStyleMemory` directly are responsible for supplying genuinely human-approved data; this object is an explicit trust boundary.
+
+The default store is `.munche/feedback.jsonl`. It can contain source text, proposals, final text, rejected text, tags, and source metadata. The first default-path write creates `.munche/.gitignore`; custom feedback paths require their own ignore policy. Saved rewrite-result artifacts also contain source excerpts and the full candidate and need equivalent protection. `review` and `learn` are local-only. Natural provider calls include selected approved examples in addition to the current rewrite segments, making those examples part of the provider privacy boundary.
+
+## 6. Suppression and configuration
 
 Rules resolve in this order:
 

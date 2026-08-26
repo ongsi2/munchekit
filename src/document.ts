@@ -792,12 +792,18 @@ export function createDocument(text: string, options: AnalyzeOptions = {}): Extr
     const uncovered: TextRange[] = [];
     let firstPossibleBlock = 0;
     for (const range of proseRanges) {
-      while ((blocks[firstPossibleBlock]?.end ?? Number.POSITIVE_INFINITY) <= range.start) firstPossibleBlock += 1;
+      const contentRange = trimRange(masked, range);
+      if (contentRange.end <= contentRange.start) continue;
+      while ((blocks[firstPossibleBlock]?.end ?? Number.POSITIVE_INFINITY) <= contentRange.start) firstPossibleBlock += 1;
       const block = blocks[firstPossibleBlock];
-      const covered = Boolean(block && range.start >= block.start && range.end <= block.end);
-      if (!covered && hasKorean(masked.slice(range.start, range.end))) uncovered.push(range);
+      const covered = Boolean(
+        block && contentRange.start >= block.start && contentRange.end <= block.end,
+      );
+      if (!covered && hasKorean(masked.slice(contentRange.start, contentRange.end))) {
+        uncovered.push(contentRange);
+      }
     }
-    blocks = [...blocks, ...uncovered].sort((left, right) => left.start - right.start || left.end - right.end);
+    blocks = mergeRanges([...blocks, ...uncovered], text.length);
   }
 
   const lineStarts = [0];

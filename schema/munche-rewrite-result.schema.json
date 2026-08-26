@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ongsi2/munchekit/main/schema/munche-rewrite-result.schema.json",
+  "title": "MuncheKit guarded rewrite result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "engineVersion",
+    "sourceHash",
+    "format",
+    "profile",
+    "mode",
+    "accepted",
+    "applied",
+    "provider",
+    "changedCharsRatio",
+    "violations",
+    "changes",
+    "text"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "kind": { "const": "munche-rewrite-result" },
+    "engineVersion": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "filePath": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "format": { "enum": ["plain", "markdown", "mdx", "json", "html", "tsx"] },
+    "profile": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "mode": { "enum": ["minimal", "natural"] },
+    "styleProfile": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[\\p{L}\\p{N}](?:[\\p{L}\\p{N}._-]{0,62}[\\p{L}\\p{N}])?$"
+    },
+    "accepted": { "type": "boolean" },
+    "applied": { "type": "boolean" },
+    "provider": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "changedCharsRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+    "violations": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "type": "string" }
+    },
+    "changes": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["before", "after", "reason", "ruleIds", "segmentId", "range"],
+        "properties": {
+          "before": { "type": "string", "minLength": 1, "maxLength": 100000 },
+          "after": { "type": "string", "maxLength": 100000 },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "ruleIds": {
+            "type": "array",
+            "maxItems": 200,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+          },
+          "segmentId": { "type": "string", "pattern": "^SEG_[0-9]+_[a-f0-9]{8}$" },
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "type": "integer", "minimum": 0 },
+              "end": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "candidate": { "type": "string", "maxLength": 10485760 },
+    "text": { "type": "string", "maxLength": 10485760 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "natural" } }, "required": ["mode"] },
+      "then": { "required": ["styleProfile"] }
+    },
+    {
+      "if": { "properties": { "accepted": { "const": true } }, "required": ["accepted"] },
+      "then": { "required": ["candidate"] }
+    }
+  ]
+}

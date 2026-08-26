@@ -37,6 +37,7 @@ Language-rule levels are configurable. `KO-PARSE-001` is a fixed engine error an
 - Flags: `가지런한 치아는 서두르지 않고 만듭니다.`
 - First review candidate: `가지런한 치아를 만들기 위해 서두르지 않습니다.`
 - Alternative when the original manner relation is intentional: `가지런한 치아를 서두르지 않고 만듭니다.`
+- HTML/JSX layout breaks are preserved in review candidates: `치아는<br>서두르지 않고 만듭니다.` → `치아를 만들기 위해<br>서두르지 않습니다.` Arbitrary inline elements and block boundaries are not joined.
 - Does not flag: explicit objects, passive constructions, or nouns outside the initial dental-outcome allowlist (`치아`, `치열`, `교합` with `만들다`). A legitimate contrastive topic inside that allowlist can still be reported, which is why the rule stays review-only.
 - Why review-only: `은/는` can mark a legitimate contrastive topic. Changing `서두르지 않고` into a purpose clause makes an interpretation explicit, so a person must confirm that intent.
 - The rule deliberately starts with a small set of known result–creation pairs. Add a hard negative whenever that set is expanded.

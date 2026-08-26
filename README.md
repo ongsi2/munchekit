@@ -2,7 +2,7 @@
 
 > 웹·앱·문서의 어색한 한국어를 찾아 이유와 최소 교정 후보를 보여줍니다.
 
-[English](./README.en.md) · [규칙 목록](./docs/rules.md) · [설계 원칙](./docs/architecture.md) · [최소 교정 교차 검토](./docs/reviews/claude-minimal-copyedit-2026-08-25.md) · [기여하기](./CONTRIBUTING.md)
+[English](./README.en.md) · [규칙 목록](./docs/rules.md) · [승인 기반 문체 기억](./docs/learning.md) · [설계 원칙](./docs/architecture.md) · [최소 교정 교차 검토](./docs/reviews/claude-minimal-copyedit-2026-08-25.md) · [기여하기](./CONTRIBUTING.md)
 
 [![CI](https://github.com/ongsi2/munchekit/actions/workflows/ci.yml/badge.svg)](https://github.com/ongsi2/munchekit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f6f5e.svg)](./LICENSE)
@@ -155,6 +155,40 @@ JSON 값과 일반 JavaScript/TypeScript 문자열은 화면 문구일 수도 �
 다음 줄의 표현은 원문 인용이다.
 ```
 
+## 승인 기반 문체 기억
+
+`review → learn → rewrite --mode natural` 흐름으로 사람이 승인한 문장쌍을 프로젝트·브랜드별 문체 기억으로 재사용할 수 있다. 이는 모델 파인튜닝이나 자동 자가학습이 아니다. 승인·직접 수정한 `before → after`를 로컬에 저장하고, 자연 재작성 때 현재 문장과 가까운 예시를 제한된 문맥으로 다시 넣는 방식이다.
+
+이 기능은 현재 `main` 브랜치의 **Unreleased** 변경에 포함되어 있으며 `v0.2.0` 태그에는 없다. 다음 릴리스 전에 시험하려면 `npm install --save-dev github:ongsi2/munchekit#main`으로 설치한 뒤 아래 명령을 `npx munche ...` 형식으로 실행한다.
+
+`--profile`은 `web`, `business`처럼 진단 규칙을 고르는 내장 린트 프리셋이다. `--style-profile`은 `gounseon`처럼 승인 기록을 분리하는 사용자 지정 ID다. 둘은 함께 쓸 수 있다.
+
+```bash
+# 이미 확정한 문장쌍을 직접 저장
+munche review --style-profile gounseon \
+  --before "가지런한 치아는 서두르지 않고 만듭니다." \
+  --after "가지런한 치아를 만들기 위해 서두르지 않습니다."
+
+# 파일의 진단과 제안을 대화형으로 승인·수정·거절
+munche review page.html --profile web --style-profile gounseon
+
+# 승인 기억과 충돌 사례 확인
+munche learn --style-profile gounseon
+
+# 관련 승인 예시를 참고하는 자연 재작성 제안
+ANTHROPIC_API_KEY=... munche rewrite page.html \
+  --profile web --mode natural --style-profile gounseon --model <Claude-모델-ID> \
+  --result-file rewrite-result.json
+
+# 가드를 통과한 제안을 사람이 검토하고 선택 적용
+munche review page.html --style-profile gounseon \
+  --rewrite-result rewrite-result.json --write
+```
+
+`--mode natural`은 바로 `--write`할 수 없다. JSON 결과를 `review --rewrite-result`로 가져와 사람이 승인·수정·거절한 범위만 적용해야 하며, 그 결정이 다음 실행에 반영된다. 기본 `--mode minimal`은 더 보수적이며 문체 기억을 사용하지 않는다.
+
+비대화형 decisions JSON, 승인·수정·거절 기록법, 개인정보 주의사항까지 포함한 전체 절차는 [승인 기반 문체 기억 문서](./docs/learning.md)에 있다.
+
 ## 라이브러리 API
 
 ```ts
@@ -174,18 +208,18 @@ console.log(fixed.text);
 
 `Diagnostic`에는 `ruleId`, `severity`, `confidence`, `range`, `location`, `rationale`, `suggestions`, `fixability`가 들어간다. 오프셋은 JavaScript와 LSP가 쓰는 UTF-16 code unit 기준이다.
 
-`--output json`의 공개 계약은 [MuncheKit JSON report schema](./schema/munche-report.schema.json)에서 확인할 수 있다.
+`lint`와 `check`의 `--output json` 계약은 [MuncheKit JSON report schema](./schema/munche-report.schema.json), `rewrite --output json` 계약은 [rewrite result schema](./schema/munche-rewrite-result.schema.json)에서 확인할 수 있다.
 
 ## 선택형 Claude 윤문
 
-로컬 규칙만으로 조사·절 관계가 얽힌 문장을 모두 교정하기는 어렵다. `rewrite`는 원문 내용어와 그 상대 순서를 유지하는 최소 교정 단계만 Claude Messages API에 위임한다. 어순 변경은 `KO-ATTACH-001`처럼 정확한 로컬 범위 교체 후보가 있을 때만 허용하며, 카피를 새로 창작하는 모드가 아니다.
+로컬 규칙만으로 조사·절 관계가 얽힌 문장을 모두 교정하기는 어렵다. 기본 `rewrite --mode minimal`은 원문 내용어와 그 상대 순서를 유지하는 최소 교정 단계만 Claude Messages API에 위임한다. 어순 변경은 `KO-ATTACH-001`처럼 정확한 로컬 범위 교체 후보가 있을 때만 허용한다. `rewrite --mode natural`은 별도로 저장한 승인 문장쌍을 참고하지만, 원문에 없던 주장을 추가할 수 없고 결과를 바로 파일에 쓰지도 않는다.
 
 ```bash
 ANTHROPIC_API_KEY=... \
   npx --yes github:ongsi2/munchekit#v0.2.0 rewrite post.md --model <사용할-Claude-모델-ID>
 ```
 
-모델 ID는 빠르게 바뀌므로 기본값을 코드에 박지 않는다. 출력은 기본적으로 화면에만 보이며 `--write`를 줘야 파일에 쓴다.
+모델 ID는 빠르게 바뀌므로 기본값을 코드에 박지 않는다. 가드를 통과한 결과는 stderr에 `원문 → 수정문`, 이유, 관련 규칙을 보여 주고 stdout에는 최종 문장만 출력해 파이프 사용을 보존한다. minimal 모드는 `--write`를 줬을 때만 파일에 쓴다. natural 모드는 직접 `--write`를 거부하고 JSON 결과를 `review --rewrite-result`로 넘기게 한다.
 
 기본 endpoint는 `https://api.anthropic.com`이다. Anthropic 호환 서비스가 필요하면 `--base-url <HTTPS URL>`을 쓸 수 있지만 API key와 segment가 그 주소로 전송되므로 직접 신뢰하는 endpoint만 지정해야 한다.
 
@@ -203,9 +237,9 @@ ANTHROPIC_API_KEY=... \
 - 후보가 원래 JSON/HTML/TSX/Markdown 구조로 다시 파싱되고 구조 signature가 같은가
 - 문서 전체와 각 segment의 변경 비율이 설정 한도를 넘지 않았나
 
-`--max-change 1`을 줘도 내용어·리터럴·부정·시제·조사 역할 가드는 꺼지지 않는다. 하나라도 어기면 후보를 폐기하고 원문을 돌려준다. 통과해도 의미 보존을 증명한 것은 아니므로 Claude 결과는 언제나 **review**다. API 요청 형식은 [Anthropic Messages API 문서](https://docs.anthropic.com/en/api/messages)를 따른다.
+`--max-change 1`을 줘도 가드가 임의로 꺼지지는 않는다. 다만 natural 모드에서 원문 전체가 사람이 승인한 `before`와 정확히 같으면 그 특정 `after`에 한해 문장 수준의 내용어·어순·시제 변경을 이미 승인한 것으로 본다. 리터럴·수치·소스 구조·변경량 가드는 이때도 유지된다. 통과해도 의미 보존을 증명한 것은 아니므로 Claude 결과는 언제나 **review**다. API 요청 형식은 [Anthropic Messages API 문서](https://docs.anthropic.com/en/api/messages)를 따른다.
 
-이 실패 사례에 사용한 읽기 전용 Claude Code 점검 방법, 재현한 지적, 수용·수정 근거는 [최소 교정 교차 검토 기록](./docs/reviews/claude-minimal-copyedit-2026-08-25.md)에 남겼다. 다른 모델의 동의만으로 규칙을 `safe`로 올리지는 않는다.
+이 실패 사례에 사용한 읽기 전용 Claude Code 점검 방법, 재현한 지적, 수용·수정 근거는 [최소 교정 교차 검토 기록](./docs/reviews/claude-minimal-copyedit-2026-08-25.md)에 남겼다. `solo-skills`의 한국어 글 다듬기 지침에서 선별한 원칙과 제외한 위험 처방은 [외부 문체 규칙 검토 기록](./docs/reviews/solo-skills-humanize-korean-2026-08-25.md)에 정리했다. 다른 모델이나 규칙집의 동의만으로 규칙을 `safe`로 올리지는 않는다.
 
 ## 맞춤법 검사기나 humanizer와 무엇이 다른가
 
@@ -221,7 +255,9 @@ MuncheKit은 저자가 사람인지 AI인지 판별하지 않으며 탐지기 �
 ## 개인정보와 한계
 
 - `lint`, `check`, `fix`는 네트워크를 쓰지 않는다.
-- `rewrite`만 사용자가 지정한 Anthropic endpoint로 보호 처리된 문서를 보낸다.
+- `review`와 `learn`도 네트워크를 쓰지 않는다. 승인 기록은 기본적으로 `.munche/feedback.jsonl`에 저장되며 원문·제안·최종 문장·거절한 제안·이유 태그·소스 위치가 들어갈 수 있다.
+- 기본 피드백 경로에 처음 기록할 때 `.munche/.gitignore`를 만들어 실수로 Git에 추가되는 것을 막는다. 이미 추적 중인 파일이나 `--feedback-file`로 지정한 별도 경로는 사용자가 직접 보호해야 한다.
+- `rewrite`만 사용자가 지정한 Anthropic endpoint로 보호 처리된 문서를 보낸다. natural 모드에서는 현재 segment와 함께 선택된 승인 문장쌍도 전송된다.
 - 로컬 pretty/JSON/SARIF 보고서의 `excerpt`에는 진단 주변 원문이 들어갈 수 있으므로, 보고서를 외부에 공유하기 전에 민감 정보를 확인해야 한다. 이 excerpt 필드는 provider 요청에는 넣지 않는다.
 - provider는 기본적으로 HTTPS만 허용하고 redirect를 거부하며, 응답 시간·크기를 제한한다.
 - CLI는 기본적으로 작업 루트 밖 파일과 심볼릭 링크를 거부한다. 루트 밖의 명시 경로를 읽어야 할 때만 `--allow-outside-root`를 사용한다.

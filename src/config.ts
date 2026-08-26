@@ -19,6 +19,7 @@ export const defaultConfig: Required<Pick<MuncheConfig, 'files' | 'ignore' | 'pr
   rules: {},
   rewrite: {
     maxChangedCharsRatio: 0.35,
+    naturalMaxChangedCharsRatio: 0.65,
   },
 };
 
@@ -105,7 +106,9 @@ export function validateConfig(value: unknown): MuncheConfig {
       throw new Error('rewrite must be an object.');
     }
     const rewrite = input.rewrite as Record<string, unknown>;
-    const unknownRewriteKeys = Object.keys(rewrite).filter((key) => key !== 'maxChangedCharsRatio');
+    const unknownRewriteKeys = Object.keys(rewrite).filter((key) => (
+      key !== 'maxChangedCharsRatio' && key !== 'naturalMaxChangedCharsRatio'
+    ));
     if (unknownRewriteKeys.length) throw new Error(`Unknown rewrite key(s): ${unknownRewriteKeys.join(', ')}`);
     if (rewrite.maxChangedCharsRatio !== undefined) {
       if (
@@ -117,6 +120,20 @@ export function validateConfig(value: unknown): MuncheConfig {
         throw new Error('rewrite.maxChangedCharsRatio must be between 0 and 1.');
       }
       output.rewrite = { maxChangedCharsRatio: rewrite.maxChangedCharsRatio };
+    }
+    if (rewrite.naturalMaxChangedCharsRatio !== undefined) {
+      if (
+        typeof rewrite.naturalMaxChangedCharsRatio !== 'number' ||
+        !Number.isFinite(rewrite.naturalMaxChangedCharsRatio) ||
+        rewrite.naturalMaxChangedCharsRatio < 0 ||
+        rewrite.naturalMaxChangedCharsRatio > 1
+      ) {
+        throw new Error('rewrite.naturalMaxChangedCharsRatio must be between 0 and 1.');
+      }
+      output.rewrite = {
+        ...(output.rewrite ?? {}),
+        naturalMaxChangedCharsRatio: rewrite.naturalMaxChangedCharsRatio,
+      };
     }
   }
   return output;
@@ -173,5 +190,6 @@ export const exampleConfig = {
   },
   rewrite: {
     maxChangedCharsRatio: 0.25,
+    naturalMaxChangedCharsRatio: 0.65,
   },
 } as const;

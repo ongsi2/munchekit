@@ -440,6 +440,66 @@ const attachmentExpression = new RegExp(
   `(?<![\\p{L}\\p{N}_])(${creationResultHeads})(은|는)\\s+서두르지\\s+않(고|으며)\\s+(${creationFiniteForms})(?=$|[.!?…])`,
   'gu',
 );
+const attachmentHtmlBreakExpression = new RegExp(
+  `(?<![\\p{L}\\p{N}_])(${creationResultHeads})(은|는)(\\s*<br\\s*\\/?>\\s*)서두르지\\s+않(고|으며)\\s+(${creationFiniteForms})(?=$|[.!?…])`,
+  'giu',
+);
+
+interface AttachmentMatch {
+  index: number;
+  end: number;
+  head: string;
+  connector: string;
+  finite: string;
+  breakToken?: string;
+}
+
+function isContainedInRange(ranges: TextRange[], start: number, end: number): boolean {
+  return ranges.some((range) => start >= range.start && end <= range.end);
+}
+
+function attachmentMatches(context: RuleContext): AttachmentMatch[] {
+  const matches: AttachmentMatch[] = regexMatchesInProse(context, attachmentExpression).flatMap((match) => {
+    if (match.index === undefined || !match[1] || !match[3] || !match[4]) return [];
+    return [{
+      index: match.index,
+      end: match.index + match[0].length,
+      head: match[1],
+      connector: match[3],
+      finite: match[4],
+    }];
+  });
+  if (!['html', 'mdx', 'tsx'].includes(context.document.format)) return matches;
+
+  const seen = new Set(matches.map((match) => `${String(match.index)}:${String(match.end)}`));
+  for (const block of context.document.blocks) {
+    const source = context.document.text.slice(block.start, block.end);
+    for (const match of regexMatches(source, attachmentHtmlBreakExpression)) {
+      if (match.index === undefined || !match[1] || !match[3] || !match[4] || !match[5]) continue;
+      const index = block.start + match.index;
+      const end = index + match[0].length;
+      const breakOffset = match[0].indexOf(match[3]);
+      const leftEnd = index + breakOffset;
+      const rightStart = leftEnd + match[3].length;
+      if (
+        !isContainedInRange(context.document.proseRanges, index, leftEnd) ||
+        !isContainedInRange(context.document.proseRanges, rightStart, end)
+      ) continue;
+      const key = `${String(index)}:${String(end)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      matches.push({
+        index,
+        end,
+        head: match[1],
+        connector: match[4],
+        finite: match[5],
+        breakToken: match[3],
+      });
+    }
+  }
+  return matches.sort((left, right) => left.index - right.index || left.end - right.end);
+}
 
 function objectParticle(noun: string): '을' | '를' {
   const last = noun.at(-1);
@@ -468,18 +528,18 @@ const attachmentPurposeRule: Rule = {
   ),
   check(context) {
     const findings: FindingDraft[] = [];
-    for (const match of regexMatchesInProse(context, attachmentExpression)) {
-      if (match.index === undefined) continue;
-      const head = match[1];
-      const connector = match[3];
-      const finite = match[4];
-      if (!head || !connector || !finite) continue;
+    for (const match of attachmentMatches(context)) {
+      const { head, connector, finite } = match;
       const form = creationForms.get(finite);
       if (!form || !creationResults.get(form.lemma)?.has(head)) continue;
       const object = `${head}${objectParticle(head)}`;
-      const range = { start: match.index, end: match.index + match[0].length };
-      const purposeReplacement = `${object} ${form.purpose} 위해 서두르지 ${form.negativeEnding}`;
-      const mannerReplacement = `${object} 서두르지 않${connector} ${finite}`;
+      const range = { start: match.index, end: match.end };
+      const purposeReplacement = match.breakToken
+        ? `${object} ${form.purpose} 위해${match.breakToken}서두르지 ${form.negativeEnding}`
+        : `${object} ${form.purpose} 위해 서두르지 ${form.negativeEnding}`;
+      const mannerReplacement = match.breakToken
+        ? `${object}${match.breakToken}서두르지 않${connector} ${finite}`
+        : `${object} 서두르지 않${connector} ${finite}`;
       findings.push({
         range,
         message: '결과물을 ‘은/는’으로 세운 뒤 만드는 방식을 이어 써, 목적과 행위의 관계가 늦게 드러납니다.',
@@ -497,6 +557,7 @@ const attachmentPurposeRule: Rule = {
             risk: 'medium',
           },
         ],
+        ...(match.breakToken ? { allowStructuralSpan: true } : {}),
       });
     }
     return findings;

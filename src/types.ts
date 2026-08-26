@@ -125,6 +125,7 @@ export interface MuncheConfig {
   rules?: Record<string, RuleLevel>;
   rewrite?: {
     maxChangedCharsRatio?: number;
+    naturalMaxChangedCharsRatio?: number;
   };
 }
 
@@ -144,11 +145,35 @@ export interface RewriteChange {
   after: string;
   reason: string;
   ruleIds: string[];
+  /** Stable provider segment identifier when the change came from a guarded rewrite. */
+  segmentId?: string;
+  /** Original UTF-16 source range for review and feedback capture. */
+  range?: TextRange;
+}
+
+export type RewriteMode = 'minimal' | 'natural';
+
+export interface ApprovedStyleExample {
+  before: string;
+  after: string;
+  reasonTags?: string[];
+  lockedClaims?: string[];
+  similarity?: number;
+}
+
+export interface RewriteStyleMemory {
+  styleId: string;
+  /** Bounded, data-labelled context produced by the learning module. */
+  promptContext: string;
+  /** Only user-accepted or user-edited examples may appear here. */
+  approvedExamples: ApprovedStyleExample[];
 }
 
 export interface RewriteOptions extends AnalyzeOptions {
   provider: RewriteProvider;
   maxChangedCharsRatio?: number;
+  mode?: RewriteMode;
+  styleMemory?: RewriteStyleMemory;
 }
 
 export interface RewriteResult {

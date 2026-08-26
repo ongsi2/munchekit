@@ -1,7 +1,7 @@
 import pc from 'picocolors';
 
 import { ruleCatalog } from './rules.js';
-import type { AnalysisReport, Diagnostic, Severity } from './types.js';
+import type { AnalysisReport, Diagnostic, RewriteChange, Severity } from './types.js';
 
 function severityLabel(severity: Severity, color: boolean): string {
   const value = severity.padEnd(7);
@@ -16,6 +16,24 @@ function terminalText(value: string): string {
     .replace(/\u001B\][^\u0007]*(?:\u0007|\u001B\\)/gu, '')
     .replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, '')
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, '�');
+}
+
+function quotedTerminalText(value: string): string {
+  return JSON.stringify(terminalText(value));
+}
+
+/** Formats guarded rewrite changes as an exact, human-reviewable before/after list. */
+export function formatRewriteChanges(changes: RewriteChange[]): string {
+  if (!changes.length) return '변경 내역: 없음';
+
+  return [
+    `변경 내역 (${String(changes.length)}개)`,
+    ...changes.flatMap((change, index) => [
+      `${String(index + 1)}. ${quotedTerminalText(change.before)} → ${quotedTerminalText(change.after)}`,
+      `   이유: ${terminalText(change.reason)}`,
+      `   규칙: ${change.ruleIds.length ? change.ruleIds.map(terminalText).join(', ') : '없음'}`,
+    ]),
+  ].join('\n');
 }
 
 export function prettyReport(report: AnalysisReport, options: { color?: boolean } = {}): string {

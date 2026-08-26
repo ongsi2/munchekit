@@ -22,7 +22,10 @@
       }
     },
     "./schema/munche.schema.json": "./schema/munche.schema.json",
-    "./schema/munche-report.schema.json": "./schema/munche-report.schema.json"
+    "./schema/munche-report.schema.json": "./schema/munche-report.schema.json",
+    "./schema/munche-feedback.schema.json": "./schema/munche-feedback.schema.json",
+    "./schema/munche-review-decisions.schema.json": "./schema/munche-review-decisions.schema.json",
+    "./schema/munche-rewrite-result.schema.json": "./schema/munche-rewrite-result.schema.json"
   },
   "files": [
     "dist",

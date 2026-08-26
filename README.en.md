@@ -2,7 +2,7 @@
 
 > An explainable Korean prose linter and guarded copyediting toolkit for product copy, docs, and localization files.
 
-[한국어](./README.md) · [Rules](./docs/rules.md) · [Architecture](./docs/architecture.md) · [Minimal-copyedit review](./docs/reviews/claude-minimal-copyedit-2026-08-25.md) · [Contributing](./CONTRIBUTING.md)
+[한국어](./README.md) · [Rules](./docs/rules.md) · [Approval-backed style memory](./docs/learning.md) · [Architecture](./docs/architecture.md) · [Minimal-copyedit review](./docs/reviews/claude-minimal-copyedit-2026-08-25.md) · [Contributing](./CONTRIBUTING.md)
 
 MuncheKit finds Korean copy inside Markdown, MDX, HTML, JSX, TSX, and JSON, then reports the exact span, rationale, confidence, and remediation risk. It is closer to **ESLint for Korean product copy** than to an opaque “AI humanizer.”
 
@@ -48,11 +48,38 @@ Supported profiles are `natural`, `web`, `tech-blog`, `business`, and `thmm-tech
 
 `munche init` pins the v0.2.0 configuration schema at
 `https://raw.githubusercontent.com/ongsi2/munchekit/v0.2.0/schema/munche.schema.json`.
-The machine-readable CLI contract is published as the [MuncheKit JSON report schema](./schema/munche-report.schema.json).
+The machine-readable lint/check contract is published as the [MuncheKit JSON report schema](./schema/munche-report.schema.json); guarded rewrite artifacts use the [rewrite result schema](./schema/munche-rewrite-result.schema.json).
 
 ## What this is not
 
 MuncheKit does not determine whether a human or AI wrote a document, and it is not designed to evade AI detectors. It evaluates concrete properties of the text regardless of authorship. It also does not replace Korean spelling/grammar checkers or professional fact, legal, or medical review.
+
+## Approval-backed style memory
+
+MuncheKit can reuse human-approved copy through a `review → learn → rewrite --mode natural` loop. This is not model fine-tuning or autonomous self-training. It stores approved or human-edited `before → after` pairs locally and retrieves a bounded set of relevant examples when natural rewrite runs.
+
+This feature is currently part of the **Unreleased** changes on `main`; it is not present in the `v0.2.0` tag. To try it before the next release, install `github:ongsi2/munchekit#main` and run the commands below through `npx munche ...`.
+
+`--profile` selects a built-in lint-rule preset such as `web`; `--style-profile` names a project- or brand-specific feedback namespace such as `gounseon`.
+
+```bash
+munche review --style-profile gounseon \
+  --before "가지런한 치아는 서두르지 않고 만듭니다." \
+  --after "가지런한 치아를 만들기 위해 서두르지 않습니다."
+
+munche review page.html --profile web --style-profile gounseon
+munche learn --style-profile gounseon
+
+ANTHROPIC_API_KEY=... munche rewrite page.html \
+  --profile web --mode natural --style-profile gounseon --model <claude-model-id> \
+  --result-file rewrite-result.json
+munche review page.html --style-profile gounseon \
+  --rewrite-result rewrite-result.json --write
+```
+
+Natural rewrite rejects direct `--write`. Its guarded JSON result must pass through `review --rewrite-result`; only human-accepted or edited ranges are applied and learned. Non-interactive review uses a JSON session followed by a decision document; see the [complete Korean workflow](./docs/learning.md).
+
+The default store is `.munche/feedback.jsonl`. It may contain source snippets, proposals, final copy, rejection examples, tags, and source locations. MuncheKit creates `.munche/.gitignore` for the default store, but custom `--feedback-file` paths need their own ignore policy. `review` and `learn` stay local; natural rewrite sends selected approved examples along with rewrite segments to the configured provider.
 
 ## Optional Claude rewrite
 
@@ -61,11 +88,11 @@ ANTHROPIC_API_KEY=... \
   npx --yes github:ongsi2/munchekit#v0.2.0 rewrite post.md --model <claude-model-id>
 ```
 
-No model is hard-coded because model IDs change. The command previews output unless `--write` is explicitly supplied. HTTPS is required, redirects are rejected, and response time and size are bounded. Raising `--max-change` never disables the content-word, literal, negation/modality, tense, particle-role, or sentence-force guards. Even a candidate that passes every guard remains review-only.
+No model is hard-coded because model IDs change. A guard-accepted result writes its exact `before → after` audit to stderr and keeps the final text as the only stdout payload. Minimal mode changes a file only with explicit `--write`; natural mode rejects direct writes and hands a JSON artifact to `review --rewrite-result` for human approval. HTTPS is required, redirects are rejected, and response time and size are bounded. Raising `--max-change` never disables guards by itself. An exact approved `before` may authorize only its corresponding `after` at sentence level; literal, numeric, source-structure, and change-budget guards still apply. Every accepted candidate remains review-only.
 
 The default endpoint is `https://api.anthropic.com`. `--base-url <HTTPS URL>` targets a compatible service; use only an endpoint you trust because it receives the API key and rewrite segments.
 
-The [minimal-copyedit Claude review](./docs/reviews/claude-minimal-copyedit-2026-08-25.md) documents the read-only protocol, reproduced failure, and dispositions. Agreement from another model never promotes a rule to `safe` on its own.
+The [minimal-copyedit Claude review](./docs/reviews/claude-minimal-copyedit-2026-08-25.md) documents the read-only protocol, reproduced failure, and dispositions. The [external Korean-style rule review](./docs/reviews/solo-skills-humanize-korean-2026-08-25.md) records which ideas from `solo-skills` were adopted, constrained, deferred, or rejected. Agreement from another model or rule pack never promotes a rule to `safe` on its own.
 
 ## Status
 

@@ -54,6 +54,28 @@ describe('document extraction', () => {
     expect(document.masked).not.toContain('const x');
   });
 
+  it('does not duplicate trimmed HTML blocks around inline tags and indentation', () => {
+    const source = [
+      '<main>',
+      '  <h1>',
+      '    가지런한 치아는<br>서두르지 않고 만듭니다',
+      '  </h1>',
+      '  <p>',
+      '    교정은 짧아도 1년입니다.',
+      '  </p>',
+      '</main>',
+    ].join('\n');
+    const document = createDocument(source, { format: 'html' });
+
+    expect(document.blocks.map((range) => source.slice(range.start, range.end))).toEqual([
+      '가지런한 치아는<br>서두르지 않고 만듭니다',
+      '교정은 짧아도 1년입니다.',
+    ]);
+    expect(document.blocks.every((range, index, ranges) => (
+      index === 0 || (ranges[index - 1]?.end ?? 0) <= range.start
+    ))).toBe(true);
+  });
+
   it('protects HTML code, preformatted text, refresh targets, and quotations', () => {
     const source = [
       '<code>미리 사전에</code>',

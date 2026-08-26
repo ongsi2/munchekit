@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ongsi2/munchekit/main/schema/munche-feedback.schema.json",
+  "title": "MuncheKit copy feedback record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "styleId",
+    "decision",
+    "before",
+    "after",
+    "reasonTags",
+    "ruleIds",
+    "lockedClaims",
+    "createdAt",
+    "engineVersion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^fb_[a-f0-9]{32}$" },
+    "styleId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[\\p{L}\\p{N}](?:[\\p{L}\\p{N}._-]{0,62}[\\p{L}\\p{N}])?$"
+    },
+    "decision": { "enum": ["accepted", "edited", "rejected", "kept"] },
+    "before": { "type": "string", "minLength": 1, "maxLength": 100000 },
+    "proposal": { "type": "string", "maxLength": 100000 },
+    "after": { "type": "string", "maxLength": 100000 },
+    "reasonTags": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+    },
+    "ruleIds": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+    },
+    "lockedClaims": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 1000 }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "filePath": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://", "maxLength": 2000 },
+        "format": { "enum": ["plain", "markdown", "mdx", "json", "html", "tsx"] },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "integer", "minimum": 0 },
+            "end": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "segmentId": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "engineVersion": { "type": "string", "minLength": 1, "maxLength": 100 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "decision": { "const": "accepted" } }, "required": ["decision"] },
+      "then": { "required": ["proposal"] }
+    },
+    {
+      "if": { "properties": { "decision": { "const": "rejected" } }, "required": ["decision"] },
+      "then": { "required": ["proposal"] }
+    }
+  ]
+}

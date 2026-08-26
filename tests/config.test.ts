@@ -40,9 +40,10 @@ describe('configuration validation', () => {
       preservePatterns: ['(?:제품|서비스)-[가-힣]+'],
       ignoreQuotes: false,
       rules: { 'KO-VAGUE-001': 'warning' },
-      rewrite: { maxChangedCharsRatio: 0.2 },
+      rewrite: { maxChangedCharsRatio: 0.2, naturalMaxChangedCharsRatio: 0.6 },
     });
     expect(config.preservePatterns).toEqual(['(?:제품|서비스)-[가-힣]+']);
+    expect(config.rewrite?.naturalMaxChangedCharsRatio).toBe(0.6);
     expect(mergeConfig(config).ignore).toContain('vendor/**');
   });
 
@@ -62,6 +63,9 @@ describe('configuration validation', () => {
       { rewrite: { maxChangeRatio: 0.2 } },
       { rewrite: { maxChangedCharsRatio: -1 } },
       { rewrite: { maxChangedCharsRatio: 2 } },
+      { rewrite: { naturalMaxChangedCharsRatio: Number.NaN } },
+      { rewrite: { naturalMaxChangedCharsRatio: -1 } },
+      { rewrite: { naturalMaxChangedCharsRatio: 2 } },
     ];
     for (const value of invalid) expect(() => validateConfig(value)).toThrow();
   });

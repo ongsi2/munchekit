@@ -62,7 +62,26 @@ describe('rule engine', () => {
   it('does not join an attachment finding across markup boundaries', () => {
     expect(ids('<p>가지런한 치아는 서두르지 않고 만듭니다.</p>', { format: 'html' })).toContain('KO-ATTACH-001');
     expect(ids('<p>가지런한 치아는 <em>서두르지 않고</em> 만듭니다.</p>', { format: 'html' })).not.toContain('KO-ATTACH-001');
+    expect(ids('<p>가지런한 치아는<span>서두르지 않고</span> 만듭니다.</p>', { format: 'html' })).not.toContain('KO-ATTACH-001');
+    expect(ids('<p>가지런한 치아는</p><p>서두르지 않고 만듭니다.</p>', { format: 'html' })).not.toContain('KO-ATTACH-001');
   });
+
+  it.each(['<br>', '<br/>', '<br />', '<BR>'])(
+    'joins KO-ATTACH-001 only across a layout break and preserves %s in each review candidate',
+    (breakToken) => {
+      const source = `<h1>가지런한 치아는${breakToken}서두르지 않고 만듭니다.</h1>`;
+      const finding = analyze(source, { format: 'html', profile: 'web' }).diagnostics.find(
+        (item) => item.ruleId === 'KO-ATTACH-001',
+      );
+      const replacement = finding?.suggestions[0]?.replacement;
+
+      expect(replacement).toBe(`치아를 만들기 위해${breakToken}서두르지 않습니다`);
+      if (!finding || !replacement) throw new Error('expected a structured attachment suggestion');
+      const candidate = `${source.slice(0, finding.range.start)}${replacement}${source.slice(finding.range.end)}`;
+      expect(candidate).toBe(`<h1>가지런한 치아를 만들기 위해${breakToken}서두르지 않습니다.</h1>`);
+      expect(analyze(candidate, { format: 'html', profile: 'web' }).summary.error).toBe(0);
+    },
+  );
 
   it('does not build a broken full-sentence preview across structured markup', () => {
     const source = '<p>가지런한 <strong>치아는 서두르지 않고 만듭니다.</strong></p>';

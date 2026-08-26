@@ -3,7 +3,42 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { analyze, ENGINE_VERSION } from '../src/engine.js';
+import { formatRewriteChanges } from '../src/index.js';
 import { jsonReport, prettyReport, sarifReport } from '../src/reporters.js';
+
+describe('rewrite change formatter', () => {
+  it('shows each exact before/after pair with its reason and rule IDs', () => {
+    const output = formatRewriteChanges([
+      {
+        before: '가지런한 치아는\n서두르지 않고 만듭니다',
+        after: '가지런한 치아를 만들기 위해 서두르지 않습니다.',
+        reason: '수식 관계를 분명히 함',
+        ruleIds: ['KO-ATTACH-001', 'KO-REGISTER-001'],
+      },
+    ]);
+
+    expect(output).toContain('변경 내역 (1개)');
+    expect(output).toContain('"가지런한 치아는\\n서두르지 않고 만듭니다" → "가지런한 치아를 만들기 위해 서두르지 않습니다."');
+    expect(output).toContain('이유: 수식 관계를 분명히 함');
+    expect(output).toContain('규칙: KO-ATTACH-001, KO-REGISTER-001');
+  });
+
+  it('reports empty changes and sanitizes terminal control sequences', () => {
+    expect(formatRewriteChanges([])).toBe('변경 내역: 없음');
+
+    const output = formatRewriteChanges([
+      {
+        before: '\u001B[31m원문',
+        after: '수정문',
+        reason: '\u001B]8;;bad\u0007이유',
+        ruleIds: [],
+      },
+    ]);
+    expect(output).not.toContain('\u001B');
+    expect(output).toContain('"원문" → "수정문"');
+    expect(output).toContain('규칙: 없음');
+  });
+});
 
 describe('pretty reporter', () => {
   it('keeps the engine and package versions aligned', () => {

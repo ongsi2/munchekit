@@ -74,7 +74,7 @@ try {
     [
       '--input-type=module',
       '--eval',
-      `import { analyze, ENGINE_VERSION } from 'munchekit'; const result = analyze('가지런한 치아는 서두르지 않고 만듭니다.', { profile: 'web' }); if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || !result.diagnostics.some((item) => item.ruleId === 'KO-ATTACH-001')) process.exit(1)`,
+      `import { analyze, buildLearnedStyleProfile, createReviewSession, ENGINE_VERSION, validateRewriteReviewArtifact } from 'munchekit'; const result = analyze('가지런한 치아는 서두르지 않고 만듭니다.', { profile: 'web' }); if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || !result.diagnostics.some((item) => item.ruleId === 'KO-ATTACH-001') || typeof buildLearnedStyleProfile !== 'function' || typeof createReviewSession !== 'function' || typeof validateRewriteReviewArtifact !== 'function') process.exit(1)`,
     ],
     consumerRoot,
   );
@@ -82,7 +82,7 @@ try {
     process.execPath,
     [
       '--eval',
-      `const { analyze, ENGINE_VERSION } = require('munchekit'); const result = analyze('가지런한 치아는 서두르지 않고 만듭니다.', { profile: 'web' }); if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || !result.diagnostics.some((item) => item.ruleId === 'KO-ATTACH-001')) process.exit(1)`,
+      `const { analyze, buildLearnedStyleProfile, createReviewSession, ENGINE_VERSION, validateRewriteReviewArtifact } = require('munchekit'); const result = analyze('가지런한 치아는 서두르지 않고 만듭니다.', { profile: 'web' }); if (ENGINE_VERSION !== ${JSON.stringify(expectedVersion)} || !result.diagnostics.some((item) => item.ruleId === 'KO-ATTACH-001') || typeof buildLearnedStyleProfile !== 'function' || typeof createReviewSession !== 'function' || typeof validateRewriteReviewArtifact !== 'function') process.exit(1)`,
     ],
     consumerRoot,
   );
@@ -90,7 +90,7 @@ try {
     process.execPath,
     [
       '--eval',
-      "const fs=require('node:fs'); for (const id of ['munchekit/schema/munche.schema.json','munchekit/schema/munche-report.schema.json']) JSON.parse(fs.readFileSync(require.resolve(id),'utf8'))",
+      "const fs=require('node:fs'); for (const id of ['munchekit/schema/munche.schema.json','munchekit/schema/munche-report.schema.json','munchekit/schema/munche-feedback.schema.json','munchekit/schema/munche-review-decisions.schema.json','munchekit/schema/munche-rewrite-result.schema.json']) JSON.parse(fs.readFileSync(require.resolve(id),'utf8'))",
     ],
     consumerRoot,
   );
@@ -111,6 +111,7 @@ try {
     'LICENSE',
     'CONTRIBUTING.md',
     'CHANGELOG.md',
+    'docs/learning.md',
     'docs/rules.md',
   ]) {
     const installedPath = path.join(consumerRoot, 'node_modules', 'munchekit', relativePath);
